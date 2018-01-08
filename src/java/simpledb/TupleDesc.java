@@ -136,7 +136,7 @@ public class TupleDesc implements Serializable {
      */
     public int fieldNameToIndex(String name) throws NoSuchElementException {
         for (int i = 0; i < this.fields.length; i++) {
-            if (this.fields[i].fieldName.equals(name)) {
+            if (this.fields[i].fieldName != null && this.fields[i].fieldName.equals(name)) {
                 return i;
             }
         }
@@ -195,7 +195,7 @@ public class TupleDesc implements Serializable {
      */
 
     public boolean equals(Object o) {
-        if (!(o instanceof TupleDesc) || ((TupleDesc) o).fields.length == this.fields.length) {
+        if (!(o instanceof TupleDesc) || ((TupleDesc) o).fields.length != this.fields.length) {
             return false;
         }
         // compare array
