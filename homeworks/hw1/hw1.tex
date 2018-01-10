@@ -2,6 +2,7 @@
 \usepackage{caption}
 \usepackage{tabularx}
 \usepackage{amsmath, amsfonts, amsthm, amssymb, mathrsfs}  % Some math symbols
+\usepackage{upgreek}
 \usepackage{bbold}
 \usepackage{dsfont}
 \usepackage{bm}
@@ -59,8 +60,8 @@
 \def\tabularxcolumn#1{m{#1}}
 %%%%%%%%%%%title%%%%%%%%%%%%%%%%%%%%%%%
 \newcommand{\myname}{Linxing Preston Jiang}
-\newcommand{\quarter}{Autumn 2017}
-\newcommand{\myhwname}{\textbf{CSE 344: Homework 7}}
+\newcommand{\quarter}{Winter 2018}
+\newcommand{\myhwname}{\textbf{CSE 444: Homework 1}}
 %%%%%%%%%%%my color box%%%%%%%%%%
 \newtcolorbox{mybox}{colback=purple!20,colframe=purple!20}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -76,7 +77,9 @@
 
 \begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
     % #1 
-    \item E/R Graph: \\
+    \item Simple SQL and Relational Algebra Review
+    \begin{enumerate}[listparindent=0.0em, itemsep=1em]
+    \item Logical query plan: % (a)
     \begin{center}
         \begin{tikzpicture}[
             table/.style={rectangle, draw, fill=blue!20, minimum size=15mm, inner sep=5pt, outer sep=2pt},
@@ -85,51 +88,74 @@
             subclass/.style={regular polygon, regular polygon sides=3, draw, fill=red!20},
             scale=0.6
         ]
-        \node[table] (cities) at (-15, 0) {Cities};
-        \node[attr, above left = 0.5cm and 3cm of cities] (cityname) {Name};
-        \node[attr, above left = 0.5cm and 0cm of cities] (citypopulation) {Population};
-        \node[attr, above right = 0.5cm and 0.3cm of cities] (longitude) {\underline{longitude}};
-        \node[attr, above right = 0.7cm and 3.3cm of cities] (latitude) {\underline{latitude}};
-        \path (cities) edge (cityname);
-        \path (cities) edge (citypopulation);
-        \path (cities) edge (longitude);
-        \path (cities) edge (latitude);
-        \node[relation, right = 3cm of cities] (belong) {Belong To};
-        \path (cities) edge (belong);
-        \node[table, right = 2cm of belong] (countries) {Countries};
-        \path[->] (belong) edge (countries);
-        \node[attr, above left = 0.5cm and 0.8cm of countries] (countryname) {\underline{Name}};
-        \node[attr, above = 0.5cm of countries] (countryarea) {Area};
-        \node[attr, above right = 0.5cm and 0.6cm of countries] (countrypopulation) {Population};
-        \node[attr, right = 1.3cm of countries] (countrygdp) {GDP};
-        \path (countries) edge (countryname);
-        \path (countries) edge (countryarea);
-        \path (countries) edge (countrypopulation);
-        \path (countries) edge (countrygdp);
-        \node[table, below right = 0.6cm and 2cm of cities] (water) {Water};
-        \node[attr, right = 0.6cm of water] (watername) {\underline{Name}};
-        \path (water) edge (watername);
-        \node[subclass, below left = 1.5cm and 2cm of water] (isariver) {is a};
-        \node[subclass, below right = 1.5cm and 2cm of water] (isasea) {is a};
-        \path (water) edge (isariver);
-        \path (water) edge (isasea);
-        \node[table, below left = 3cm and 2cm of water] (river) {Rivers};
-        \node[table, below right = 3cm and 2cm of water] (sea) {Seas};
-        \path (isariver) edge (river);
-        \path (isasea) edge (sea);
-        \node[attr, below = 1cm of river] (riverlength) {Length};
-        \node[attr, below = 1cm of sea] (seadepth) {Max Depth};
-        \path (river) edge (riverlength);
-        \path (sea) edge (seadepth);
-        \node[relation, above left = 1cm and 1cm of isariver] (endsin) {Ends In};
-        \path (river) edge[bend left=60] (endsin);
-        \path[->] (endsin) edge[bend left=10] (water);
-        \node[relation, above right= 1cm and 1cm of isasea] (cross) {Crosses};
-        \path (river) edge[bend left=10] node[above, midway] {$\geq 1$} (cross);
-        \path (cross) edge[bend right=10] (countries);
+        
+        \node (R) at(-20, 0) {\texttt{R}};
+        \node[right=3cm of R] (S)  {\texttt{S}};
+        \node[right=3cm of S] (T)  {\texttt{T}};
+        % selection
+        \node[above=1.5cm of R] (Rb) {$\sigma_{\texttt{R.b $\geq$ 10}}$};
+        \node[above=1.5cm of S] (Se) {$\sigma_{\texttt{S.e $=$ 3}}$};
+        \path (R) edge (Rb);
+        \path (S) edge (Se);
+        % join
+        \node[above right = 1.5cm and 0.8cm of Rb] (joinRS) {$\bowtie_{\texttt{R.c = S.d}}$};
+        \node[above right = 1.2cm and 0.8cm of joinRS] (joinT) {$\bowtie_{\texttt{S.f = T.g, T.i = R.a}}$};
+        \path (Rb) edge (joinRS);
+        \path (Se) edge (joinRS);
+        \path (T) edge (joinT);
+        \path (joinRS) edge (joinT);
+        % projection
+        \node[above=1.5cm of joinT] (proj) {$\Uppi_{\texttt{R.a, R.b, R.c, S.e, S.f, T.h}}$};
+        \path (joinT) edge (proj);
+
+        
+
+        %\node[table] (cities) at (-15, 0) {Cities};
+        %\node[attr, above left = 0.5cm and 3cm of cities] (cityname) {Name};
+        %\node[attr, above left = 0.5cm and 0cm of cities] (citypopulation) {Population};
+        %\node[attr, above right = 0.5cm and 0.3cm of cities] (longitude) {\underline{longitude}};
+        %\node[attr, above right = 0.7cm and 3.3cm of cities] (latitude) {\underline{latitude}};
+        %\path (cities) edge (cityname);
+        %\path (cities) edge (citypopulation);
+        %\path (cities) edge (longitude);
+        %\path (cities) edge (latitude);
+        %\node[relation, right = 3cm of cities] (belong) {Belong To};
+        %\path (cities) edge (belong);
+        %\node[table, right = 2cm of belong] (countries) {Countries};
+        %\path[->] (belong) edge (countries);
+        %\node[attr, above left = 0.5cm and 0.8cm of countries] (countryname) {\underline{Name}};
+        %\node[attr, above = 0.5cm of countries] (countryarea) {Area};
+        %\node[attr, above right = 0.5cm and 0.6cm of countries] (countrypopulation) {Population};
+        %\node[attr, right = 1.3cm of countries] (countrygdp) {GDP};
+        %\path (countries) edge (countryname);
+        %\path (countries) edge (countryarea);
+        %\path (countries) edge (countrypopulation);
+        %\path (countries) edge (countrygdp);
+        %\node[table, below right = 0.6cm and 2cm of cities] (water) {Water};
+        %\node[attr, right = 0.6cm of water] (watername) {\underline{Name}};
+        %\path (water) edge (watername);
+        %\node[subclass, below left = 1.5cm and 2cm of water] (isariver) {is a};
+        %\node[subclass, below right = 1.5cm and 2cm of water] (isasea) {is a};
+        %\path (water) edge (isariver);
+        %\path (water) edge (isasea);
+        %\node[table, below left = 3cm and 2cm of water] (river) {Rivers};
+        %\node[table, below right = 3cm and 2cm of water] (sea) {Seas};
+        %\path (isariver) edge (river);
+        %\path (isasea) edge (sea);
+        %\node[attr, below = 1cm of river] (riverlength) {Length};
+        %\node[attr, below = 1cm of sea] (seadepth) {Max Depth};
+        %\path (river) edge (riverlength);
+        %\path (sea) edge (seadepth);
+        %\node[relation, above left = 1cm and 1cm of isariver] (endsin) {Ends In};
+        %\path (river) edge[bend left=60] (endsin);
+        %\path[->] (endsin) edge[bend left=10] (water);
+        %\node[relation, above right= 1cm and 1cm of isasea] (cross) {Crosses};
+        %\path (river) edge[bend left=10] node[above, midway] {$\geq 1$} (cross);
+        %\path (cross) edge[bend right=10] (countries);
         \end{tikzpicture}
     \end{center}
     % #2
+    \end{enumerate}
     \item 
         \begin{itemize}
             \item See the queries below.
