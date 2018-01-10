@@ -3,3 +3,8 @@
 
 # Ignore Intellij setup
 .idea
+
+# Ignore latex crap
+*.out
+*.aux
+*.log
