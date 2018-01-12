@@ -76,145 +76,163 @@
 \vspace{.15in} \hrule \vspace{0.5em}%
 
 \begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
-    % #1 
+    %%% #1 %%%
     \item Simple SQL and Relational Algebra Review
     \begin{enumerate}[listparindent=0.0em, itemsep=1em]
-    \item Logical query plan: % (a)
-    \begin{center}
+        % 1(a)
+        \item Logical query plan: 
+        \begin{center}
+            \begin{tikzpicture}[
+                scale=0.6
+            ]
+            \node (R) at(-20, 0) {\texttt{R}};
+            \node[right=3cm of R] (S)  {\texttt{S}};
+            \node[right=3cm of S] (T)  {\texttt{T}};
+            % selection
+            \node[above=1.5cm of R] (Rb) {$\sigma_{\texttt{R.b $\geq$ 10}}$};
+            \node[above=1.5cm of S] (Se) {$\sigma_{\texttt{S.e $=$ 3}}$};
+            \path (R) edge (Rb);
+            \path (S) edge (Se);
+            % join
+            \node[above right = 1.5cm and 0.8cm of Rb] (joinRS) {$\bowtie_{\texttt{R.c = S.d}}$};
+            \node[above right = 1.2cm and 0.8cm of joinRS] (joinT) {$\bowtie_{\texttt{S.f = T.g}}$};
+            \path (Rb) edge (joinRS);
+            \path (Se) edge (joinRS);
+            \path (T) edge (joinT);
+            \path (joinRS) edge (joinT);
+            % select again
+            \node[above=1.5cm of joinT] (selectT) {$\sigma_{\texttt{T.i = R.a}}$};
+            \path (joinT) edge (selectT);
+            % projection
+            \node[above=1.5cm of selectT] (proj) {$\Uppi_{\texttt{R.a, R.b, R.c, S.e, S.f, T.h}}$};
+            \path (selectT) edge (proj);
+            \end{tikzpicture}
+        \end{center}
+        % 1(b)
+        \item Logical query plan:
+        \begin{center}
         \begin{tikzpicture}[
-            table/.style={rectangle, draw, fill=blue!20, minimum size=15mm, inner sep=5pt, outer sep=2pt},
-            relation/.style={diamond, draw, fill=yellow!20, minimum size=3mm, inner sep=3pt, outer sep=2pt},
-            attr/.style={ellipse, draw, fill=cyan!20, minimum size=5mm, inner sep=3pt, outer sep=2pt}, 
-            subclass/.style={regular polygon, regular polygon sides=3, draw, fill=red!20},
             scale=0.6
         ]
-        
         \node (R) at(-20, 0) {\texttt{R}};
-        \node[right=3cm of R] (S)  {\texttt{S}};
-        \node[right=3cm of S] (T)  {\texttt{T}};
+        \node[right=4cm of R] (S)  {\texttt{S}};
         % selection
         \node[above=1.5cm of R] (Rb) {$\sigma_{\texttt{R.b $\geq$ 10}}$};
-        \node[above=1.5cm of S] (Se) {$\sigma_{\texttt{S.e $=$ 3}}$};
         \path (R) edge (Rb);
-        \path (S) edge (Se);
         % join
         \node[above right = 1.5cm and 0.8cm of Rb] (joinRS) {$\bowtie_{\texttt{R.c = S.d}}$};
-        \node[above right = 1.2cm and 0.8cm of joinRS] (joinT) {$\bowtie_{\texttt{S.f = T.g, T.i = R.a}}$};
         \path (Rb) edge (joinRS);
-        \path (Se) edge (joinRS);
-        \path (T) edge (joinT);
-        \path (joinRS) edge (joinT);
-        % projection
-        \node[above=1.5cm of joinT] (proj) {$\Uppi_{\texttt{R.a, R.b, R.c, S.e, S.f, T.h}}$};
-        \path (joinT) edge (proj);
-
-        
-
-        %\node[table] (cities) at (-15, 0) {Cities};
-        %\node[attr, above left = 0.5cm and 3cm of cities] (cityname) {Name};
-        %\node[attr, above left = 0.5cm and 0cm of cities] (citypopulation) {Population};
-        %\node[attr, above right = 0.5cm and 0.3cm of cities] (longitude) {\underline{longitude}};
-        %\node[attr, above right = 0.7cm and 3.3cm of cities] (latitude) {\underline{latitude}};
-        %\path (cities) edge (cityname);
-        %\path (cities) edge (citypopulation);
-        %\path (cities) edge (longitude);
-        %\path (cities) edge (latitude);
-        %\node[relation, right = 3cm of cities] (belong) {Belong To};
-        %\path (cities) edge (belong);
-        %\node[table, right = 2cm of belong] (countries) {Countries};
-        %\path[->] (belong) edge (countries);
-        %\node[attr, above left = 0.5cm and 0.8cm of countries] (countryname) {\underline{Name}};
-        %\node[attr, above = 0.5cm of countries] (countryarea) {Area};
-        %\node[attr, above right = 0.5cm and 0.6cm of countries] (countrypopulation) {Population};
-        %\node[attr, right = 1.3cm of countries] (countrygdp) {GDP};
-        %\path (countries) edge (countryname);
-        %\path (countries) edge (countryarea);
-        %\path (countries) edge (countrypopulation);
-        %\path (countries) edge (countrygdp);
-        %\node[table, below right = 0.6cm and 2cm of cities] (water) {Water};
-        %\node[attr, right = 0.6cm of water] (watername) {\underline{Name}};
-        %\path (water) edge (watername);
-        %\node[subclass, below left = 1.5cm and 2cm of water] (isariver) {is a};
-        %\node[subclass, below right = 1.5cm and 2cm of water] (isasea) {is a};
-        %\path (water) edge (isariver);
-        %\path (water) edge (isasea);
-        %\node[table, below left = 3cm and 2cm of water] (river) {Rivers};
-        %\node[table, below right = 3cm and 2cm of water] (sea) {Seas};
-        %\path (isariver) edge (river);
-        %\path (isasea) edge (sea);
-        %\node[attr, below = 1cm of river] (riverlength) {Length};
-        %\node[attr, below = 1cm of sea] (seadepth) {Max Depth};
-        %\path (river) edge (riverlength);
-        %\path (sea) edge (seadepth);
-        %\node[relation, above left = 1cm and 1cm of isariver] (endsin) {Ends In};
-        %\path (river) edge[bend left=60] (endsin);
-        %\path[->] (endsin) edge[bend left=10] (water);
-        %\node[relation, above right= 1cm and 1cm of isasea] (cross) {Crosses};
-        %\path (river) edge[bend left=10] node[above, midway] {$\geq 1$} (cross);
-        %\path (cross) edge[bend right=10] (countries);
+        \path (S) edge (joinRS);
+        % group by
+        \node[above=1.5cm of joinRS] (group) {$\gamma_{\texttt{R.a, S.f, sum(S.e), count(*) $\to$ c}}$};        
+        \path (joinRS) edge (group);
+        % having
+        \node[above=1.5cm of group] (having) {$\sigma_{\texttt{c $\geq$ 10}}$};
+        \path (group) edge (having);
         \end{tikzpicture}
-    \end{center}
-    % #2
+        \end{center}
     \end{enumerate}
+          
+    %%% #2 %%%
+    \newpage
+    \item
+    \begin{enumerate}[listparindent=0.0em, itemsep=1em]
+        % 2(a)
+        \item schematic representation:
+        \begin{center}
+        \begin{tikzpicture}[
+            slot/.style={draw, minimum width=2cm, minimum height=0.5cm},
+            brace/.style={decoration={brace, mirror},decorate}
+        ]
+        \foreach \x in {0, 2, ..., 6} {
+            \node[slot] at (\x, 0) {};
+            \node at (\x, -0.5) {\tiny{Slot}};
+        }
+        \node[slot] at (8, 0) {\text{...}};
+        \node[slot] at (10, 0) {};
+        \node at (10, -0.5) {\tiny{Slot}};
+        \node[slot, fill=blue!20] (header) at (12, 0) {header};
+        \node (headerd) at (10, -1.5) {\tiny{header stores a collection of bits, each represents if the corresponding is valid or not (deleted or not initialized)}};
+        \path[->] (headerd) edge (header);
+        % total size
+        \node (start) at (-1, -0.5) {};
+        \node (end) at (13, -0.5) {};
+        \draw[brace] (start.south) -- node [below=3pt, pos=0.5] {\tiny{total size: 8KB}} (end.south);
+        \end{tikzpicture}
+        \end{center}
+
+        % 2(b)
+        \item 
+        Suppose one page can fit $x$ tuples. We have
+        $$ 34x + \frac{x}{8} \leq 8192 $$
+        $$ x = \left\lfloor\frac{65536}{273}\right\rfloor = 240$$
+        240 tuples fit on one page. We need $\left\lceil\frac{240}{8}\right\rceil = 30$ bytes for the page header. To fit 1000 tuples, we need $\left\lceil\frac{1000}{240}\right\rceil = 5$ pages
+
+        % 2(c)
+        \item schematic representation (3 variable length tuples stored):
+        \begin{center}
+        \begin{tikzpicture}[
+            slot/.style={draw, minimum width=2cm, minimum height=0.5cm},
+            brace/.style={decoration={brace, mirror},decorate}
+        ]
+            \node (onel) at (0, 0) {};
+            \node (oner) at (3, -0.5) {};
+            \node (twol) at (3, 0) {};
+            \node (twor) at (4, -0.5) {};
+            \node (threel) at (4, 0) {};
+            \node (threer) at (6, -0.5) {};
+            % label
+            \node at (1.5, -0.8) {\tiny{Slot}};
+            \node at (3.5, -0.8) {\tiny{Slot}};
+            \node at (5, -0.8) {\tiny{Slot}};
+            \node (freel) at (6, 0) {};
+            \node (freer) at (11, -0.5) {};
+            \node (sonel) at (11, 0) {};
+            \node (soner) at (12, -0.5) {};
+            \node (stwol) at (12, 0) {};
+            \node (stwor) at (13, -0.5) {};
+            \node (sthreel) at (13, 0) {};
+            \node (sthreer) at (14, -0.5) {};
+            \node (sthreel) at (13, 0) {};
+            \node (sthreer) at (14, -0.5) {};
+            \node (sthreel) at (13, 0) {};
+            \node (sthreer) at (14, -0.5) {};
+            \node (countl) at (14, 0) {};
+            \node (countr) at (15, -0.5) {};
+            \node (fl) at (15, 0) {};
+            \node (fr) at (16, -0.5) {};
+            \draw[draw=black] (onel) rectangle (oner);
+            \draw[draw=black] (twol) rectangle (twor);
+            \draw[draw=black] (threel) rectangle (threer);
+            \draw[draw=black, fill=blue!20] (freel) rectangle (freer) node[midway] {free space};
+            \draw[draw=black] (sonel) rectangle (soner);
+            \draw[draw=black] (stwol) rectangle (stwor);
+            \draw[draw=black] (sthreel) rectangle (sthreer);
+            \draw[draw=black] (countl) rectangle (countr) node[midway] {3};
+            \draw[draw=black] (fl) rectangle (fr) node[midway] {F};
+            % paths
+            \node (sone) at (11.5, 0) {};
+            \node (stwo) at (12.5, 0) {};
+            \node (sthree) at (13.5, 0) {};
+            \node (sfree) at (15.5, 0) {};
+            \path[->] (sone) edge [bend right] (onel);
+            \path[->] (stwo) edge [bend right] (twol);
+            \path[->] (sthree) edge [bend right] (threel);
+            \path[->] (sfree) edge [bend right] (freel);
+            \draw[brace] (freer.south) -- node [below=3pt, pos=0.5] {\tiny{Slot Directory: $<$ record offset, record length $>$}} (sthreer.south);
+        \end{tikzpicture} 
+        \end{center}
+    \end{enumerate}
+    
+    %%% #3
     \item 
-        \begin{itemize}
-            \item See the queries below.
-            \begin{lstlisting}
-CREATE TABLE InsuranceCo (name varchar(20) PRIMARY KEY, phone integer);
-CREATE TABLE Person (ssn integer PRIMARY KEY, name varchar(20));
-CREATE TABLE Vehicle (
-    licensePlate varchar(20) PRIMARY KEY, 
-    year integer,
-    maxLiability double,
-    name REFERENCES InsuranceCo (name), 
-    ssn REFERENCES Person (ssn)
-    );
-CREATE TABLE Driver (
-    driverID integer, 
-    ssn REFERENCES Person (ssn)
-    );
-CREATE TABLE NonProfessionalDriver (
-    ssn REFERENCES Person (ssn), 
-    driverID REFERENCES Driver (driverID)
-    );
-CREATE TABLE ProfessionalDriver (
-    medicalHistory varchar(20),
-    ssn REFERENCES Person (ssn), 
-    driverID REFERENCES Driver (driverID)
-    );
-CREATE TABLE Truck (
-    capacity integer,
-    licensePlate REFERENCES Vehicle (licensePlate),
-    ssn REFERENCES Person (ssn)
-    );
-CREATE TABLE Car (
-    make varchar(20),
-    licensePlate REFERENCES Vehicle (licensePlate)
-    );
-CREATE TABLE Drives (
-    licensePlate REFERENCES Vehicle (licensePlate),
-    ssn REFERENCES Person (ssn)
-    );
-            \end{lstlisting}
-        \item The ``\texttt{insures}'' relationship is many-to-one, so it is included in the \texttt{Vehicle} relation. 
-        \item \texttt{Drives} is a many-to-many relationship, \texttt{Operates} is a many-to-one relationship. Therefore,
-           \texttt{Drives} requires an individual relation table, while \texttt{Operates} can be integrated into \texttt{Truck}
-        \end{itemize}
-    % #3
+    \begin{enumerate}[listparindent=0.0em, itemsep=1em]
     \item 
-        \begin{itemize}
-            \item First pick D $\to$ B. Then we have two relations (ACDE), (DB) \par
-                  Then fix CE $\to$ A in (ACDE), giving us (CDE), (CEA), (DB) as the final decomposition.
-            \item First pick BC $\to$ A. Then we have two relations (BCDE), (BCA). \par
-                  Then fix DE $\to$ B, giving us (CDE), (DEB), (BCA) as the final decomposition.
-        \end{itemize}
-    % #4
-    \item 
-        \begin{itemize}
-            \item \{\}
-            \item \{A $\to$ B, B $\to$ C, C $\to$ D, D $\to$ A\}
-            \item \{A $\to$ B, B $\to$ A, C $\to$ (ABD), D $\to$ (ABC)\} 
-        \end{itemize}
-        
-\end{enumerate}
+    The project operator calls \texttt{next()}, which makes the sequential scan operator call \texttt{next()}. Then the heap file iterator interface gets called, which calls the \texttt{getPage()} and get the page data from the buffer pool manager.
+    \item Since the buffer pool is initially empty, the first \texttt{next()} call will pull one whole page containing the data into the buffer pool. So the buffer pool will contain one cached page.
+    \item The next \texttt{next()} call will get the data directly from the buffer pool's page. So the buffer pool still contains one page.
+    \item We know from \# 2 one page contains 240 pages. So 1000 calls will need $\left\lceil\frac{1000}{240}\right\rceil = 5$ pages to be pulled into the buffer pool.
+    \item Since the buffer pool can hold 10 pages. When the query completes, the buffer pool will contains 10 pages which hold the later $2400$ tuples.
+    \end{enumerate} 
+    \end{enumerate}
 \end{document}
