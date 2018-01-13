@@ -18,9 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Catalog {
 
-    private Map<String, DbFile> tableMap;
-    private Map<String, String> pKeyMap;
-    private Map<Integer, DbFile> idMap;
+    private Map<String, TableGroup> tableMap;
+    private Map<Integer, TableGroup> idMap;
 
     /**
      * Constructor.
@@ -28,7 +27,6 @@ public class Catalog {
      */
     public Catalog() {
         this.tableMap = new HashMap<>();
-        this.pKeyMap = new HashMap<>();
         this.idMap = new HashMap<>();
     }
 
@@ -42,9 +40,9 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        this.tableMap.put(name, file);
-        this.pKeyMap.put(name, pkeyField);
-        this.idMap.put(file.getId(), file);
+        TableGroup t = new TableGroup(file, pkeyField);
+        this.tableMap.put(name, t);
+        this.idMap.put(file.getId(), t);
     }
 
     public void addTable(DbFile file, String name) {
@@ -67,10 +65,10 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public int getTableId(String name) throws NoSuchElementException {
-        DbFile f = this.tableMap.get(name);
-        if (f == null)
+        TableGroup t = this.tableMap.get(name);
+        if (t == null || t.file == null)
             throw new NoSuchElementException();
-        return f.getId();
+        return t.file.getId();
     }
 
     /**
@@ -80,10 +78,10 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
-        DbFile f = this.idMap.get(tableid);
-        if (f == null)
+        TableGroup t = this.idMap.get(tableid);
+        if (t == null || t.file == null)
             throw new NoSuchElementException();
-        return f.getTupleDesc();
+        return t.file.getTupleDesc();
     }
 
     /**
@@ -93,30 +91,40 @@ public class Catalog {
      *     function passed to addTable
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
-        DbFile f = this.idMap.get(tableid);
-        if (f == null)
+        TableGroup t = this.idMap.get(tableid);
+        if (t == null || t.file == null)
             throw new NoSuchElementException();
-        return f;
+        return t.file;
     }
 
     public String getPrimaryKey(int tableid) {
-        // some code goes here
-        return null;
+        TableGroup t = this.idMap.get(tableid);
+        if (t == null || t.file == null)
+            return null;
+        return t.pkeyField;
     }
 
     public Iterator<Integer> tableIdIterator() {
-        // some code goes here
-        return null;
+        Set<Integer> idList = this.idMap.keySet();
+        return idList.iterator();
     }
 
     public String getTableName(int id) {
-        // some code goes here
+        TableGroup t = this.idMap.get(id);
+        if (t == null || t.file == null)
+            return null;
+        // check name
+        for (String name : this.tableMap.keySet()) {
+            if (this.tableMap.get(name).file.getId() == id)
+                return name;
+        }
         return null;
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
-        // some code goes here
+        this.tableMap.clear();
+        this.idMap.clear();
     }
     
     /**
@@ -171,6 +179,19 @@ public class Catalog {
         } catch (IndexOutOfBoundsException e) {
             System.out.println ("Invalid catalog entry : " + line);
             System.exit(0);
+        }
+    }
+
+    /**
+     * Group for DbFile and primary key string
+     */
+    private class TableGroup {
+        DbFile file;
+        String pkeyField;
+
+        private TableGroup(DbFile file, String pkeyField) {
+            this.file = file;
+            this.pkeyField = pkeyField;
         }
     }
 }
