@@ -18,12 +18,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Catalog {
 
+    private Map<String, DbFile> tableMap;
+    private Map<String, String> pKeyMap;
+    private Map<Integer, DbFile> idMap;
+
     /**
      * Constructor.
      * Creates a new, empty catalog.
      */
     public Catalog() {
-        // some code goes here
+        this.tableMap = new HashMap<>();
+        this.pKeyMap = new HashMap<>();
+        this.idMap = new HashMap<>();
     }
 
     /**
@@ -36,7 +42,9 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        // some code goes here
+        this.tableMap.put(name, file);
+        this.pKeyMap.put(name, pkeyField);
+        this.idMap.put(file.getId(), file);
     }
 
     public void addTable(DbFile file, String name) {
@@ -59,8 +67,10 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public int getTableId(String name) throws NoSuchElementException {
-        // some code goes here
-        return 0;
+        DbFile f = this.tableMap.get(name);
+        if (f == null)
+            throw new NoSuchElementException();
+        return f.getId();
     }
 
     /**
@@ -70,8 +80,10 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
-        // some code goes here
-        return null;
+        DbFile f = this.idMap.get(tableid);
+        if (f == null)
+            throw new NoSuchElementException();
+        return f.getTupleDesc();
     }
 
     /**
@@ -81,8 +93,10 @@ public class Catalog {
      *     function passed to addTable
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
-        // some code goes here
-        return null;
+        DbFile f = this.idMap.get(tableid);
+        if (f == null)
+            throw new NoSuchElementException();
+        return f;
     }
 
     public String getPrimaryKey(int tableid) {
