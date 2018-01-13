@@ -26,8 +26,8 @@ public class Catalog {
      * Creates a new, empty catalog.
      */
     public Catalog() {
-        this.tableMap = new HashMap<>();
-        this.idMap = new HashMap<>();
+        this.tableMap = new ConcurrentHashMap<>();
+        this.idMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -72,6 +72,8 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public int getTableId(String name) throws NoSuchElementException {
+        if (name == null)
+            throw new NoSuchElementException();
         TableGroup t = this.tableMap.get(name);
         if (t == null || t.file == null)
             throw new NoSuchElementException();
