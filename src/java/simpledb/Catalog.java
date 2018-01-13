@@ -40,7 +40,14 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        TableGroup t = new TableGroup(file, pkeyField);
+        TableGroup t = new TableGroup(file, name, pkeyField);
+        // handle name duplicate, take the id entry out
+        if (this.tableMap.containsKey(name))
+            this.idMap.remove(this.tableMap.get(name).file.getId());
+        // handle id duplicate
+        if (this.idMap.containsKey(file.getId()))
+            this.tableMap.remove(this.idMap.get(file.getId()).name);
+
         this.tableMap.put(name, t);
         this.idMap.put(file.getId(), t);
     }
@@ -114,11 +121,7 @@ public class Catalog {
         if (t == null || t.file == null)
             return null;
         // check name
-        for (String name : this.tableMap.keySet()) {
-            if (this.tableMap.get(name).file.getId() == id)
-                return name;
-        }
-        return null;
+        return t.name;
     }
     
     /** Delete all tables from the catalog */
@@ -187,10 +190,12 @@ public class Catalog {
      */
     private class TableGroup {
         DbFile file;
+        String name;
         String pkeyField;
 
-        private TableGroup(DbFile file, String pkeyField) {
+        private TableGroup(DbFile file, String name, String pkeyField) {
             this.file = file;
+            this.name = name;
             this.pkeyField = pkeyField;
         }
     }
