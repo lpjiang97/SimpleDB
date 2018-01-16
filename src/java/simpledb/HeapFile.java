@@ -17,7 +17,6 @@ public class HeapFile implements DbFile {
 
     private File f;
     private TupleDesc td;
-    private List<Page> pageList;
 
     /**
      * Constructs a heap file backed by the specified file.
@@ -29,7 +28,6 @@ public class HeapFile implements DbFile {
     public HeapFile(File f, TupleDesc td) {
         this.f = f;
         this.td = td;
-        this.pageList = new ArrayList<>();
     }
 
     /**
@@ -66,6 +64,9 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
         int pgNo = pid.getPageNumber();
+        // check if page exists
+        if (pgNo >= this.numPages())
+            throw new IllegalArgumentException();
         int pageSize = BufferPool.getPageSize();
         // read
         try {
@@ -114,9 +115,46 @@ public class HeapFile implements DbFile {
 
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
-        // some code goes here
+
         return null;
     }
 
+    private class DbFileIt implements DbFileIterator {
+
+        private int pageNo;
+        private Page p;
+        private TransactionId tid;
+
+        private DbFileIt(TransactionId tid) {
+            this.tid = tid;
+        }
+
+        @Override
+        public void open() throws DbException, TransactionAbortedException {
+            this.pageNo = 0;
+            // read only for now, might need to change
+            this.p = Database.getBufferPool().getPage(this.tid, new HeapPageId(getId(), this.pageNo), Permissions.READ_ONLY);
+        }
+
+        @Override
+        public boolean hasNext() throws DbException, TransactionAbortedException {
+            return false;
+        }
+
+        @Override
+        public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
+            return null;
+        }
+
+        @Override
+        public void rewind() throws DbException, TransactionAbortedException {
+
+        }
+
+        @Override
+        public void close() {
+
+        }
+    }
 }
 
