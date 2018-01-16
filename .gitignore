@@ -3,8 +3,13 @@
 
 # Ignore Intellij setup
 .idea
+simple-db-prestonj.iml
 
 # Ignore latex crap
 *.out
 *.aux
 *.log
+
+# Ignore log
+log
+
