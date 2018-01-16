@@ -115,45 +115,71 @@ public class HeapFile implements DbFile {
 
     // see DbFile.java for javadocs
     public DbFileIterator iterator(TransactionId tid) {
-
-        return null;
+        return new DbFileIt(tid);
     }
 
     private class DbFileIt implements DbFileIterator {
 
         private int pageNo;
-        private Page p;
+        private HeapPage p;
         private TransactionId tid;
+        private Iterator<Tuple> tupleIt;
 
         private DbFileIt(TransactionId tid) {
             this.tid = tid;
+            this.p = null;
+            this.tupleIt = null;
         }
 
         @Override
         public void open() throws DbException, TransactionAbortedException {
-            this.pageNo = 0;
-            // read only for now, might need to change
-            this.p = Database.getBufferPool().getPage(this.tid, new HeapPageId(getId(), this.pageNo), Permissions.READ_ONLY);
+            reset();
         }
 
         @Override
         public boolean hasNext() throws DbException, TransactionAbortedException {
-            return false;
+            // check nulls
+            if (closed())
+                return false;
+            // check if current page has next
+            if (this.tupleIt.hasNext())
+                return true;
+            // if there is no next page
+            if (!this.tupleIt.hasNext() && this.pageNo + 1 >= numPages())
+                return false;
+            // switch to next page
+            this.p = (HeapPage) Database.getBufferPool().getPage(this.tid, new HeapPageId(getId(), ++this.pageNo), Permissions.READ_ONLY);
+            this.tupleIt = this.p.iterator();
+            return true;
         }
 
         @Override
         public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-            return null;
+            if (closed())
+                throw new NoSuchElementException();
+            return this.tupleIt.next();
         }
 
         @Override
         public void rewind() throws DbException, TransactionAbortedException {
-
+            reset();
         }
 
         @Override
         public void close() {
+            this.p = null;
+            this.tupleIt = null;
+        }
 
+        private void reset() throws TransactionAbortedException, DbException {
+            this.pageNo = 0;
+            // read only for now, might need to change
+            this.p = (HeapPage) Database.getBufferPool().getPage(this.tid, new HeapPageId(getId(), this.pageNo), Permissions.READ_ONLY);
+            this.tupleIt = this.p.iterator();
+        }
+
+        private boolean closed() {
+            return p == null || tupleIt == null;
         }
     }
 }
