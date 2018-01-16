@@ -1,5 +1,6 @@
 package simpledb;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 
 import java.util.Map;
@@ -27,7 +28,6 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
-    private final Catalog catalog;
     private final int numPages;
     private final Map<PageId, Page> pageMap;
 
@@ -38,7 +38,6 @@ public class BufferPool {
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        this.catalog = new Catalog();
         this.numPages = numPages;
         this.pageMap = new ConcurrentHashMap<>();
     }
@@ -83,7 +82,7 @@ public class BufferPool {
             // BufferPool full
             if (this.pageMap.size() >= this.numPages)
                 throw new DbException("BufferPool full!");
-            Page p = this.catalog.getDatabaseFile(pid.getTableId()).readPage(pid);
+            Page p = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
             this.pageMap.put(pid, p);
             return p;
         }
