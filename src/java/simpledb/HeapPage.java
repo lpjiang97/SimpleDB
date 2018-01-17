@@ -66,7 +66,7 @@ public class HeapPage implements Page {
         @return the number of tuples on this page
     */
     private int getNumTuples() {
-        return (BufferPool.getPageSize() * 8) / (this.td.getSize() * 8 + 1);
+        return (int)((double)(BufferPool.getPageSize() * 8) / (double)(this.td.getSize() * 8 + 1));
     }
 
     /**
@@ -74,7 +74,7 @@ public class HeapPage implements Page {
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
     private int getHeaderSize() {        
-        return (int)(Math.ceil(getNumTuples() / 8));
+        return (int)(Math.ceil(getNumTuples() / 8.0));
     }
     
     /** Return a view of this page before it was modified
@@ -288,7 +288,7 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // get the byte
-        byte b = this.header[i / 8];
+        byte b = this.header[Math.floorDiv(i, 8)];
         byte mask = (byte)(1 << (i % 8));
         return (byte)(b & mask) != 0;
     }
@@ -306,9 +306,13 @@ public class HeapPage implements Page {
      * (note that this iterator shouldn't return tuples in empty slots!)
      */
     public Iterator<Tuple> iterator() {
-        List<Tuple> tupleList = Arrays.asList(this.tuples);
+        List<Tuple> tupleList = new ArrayList<>();
+        for (int i = 0; i < this.numSlots; i++) {
+            if (isSlotUsed(i) && tuples[i] != null)
+                tupleList.add(tuples[i]);
+        }
         // filter null objects
-        return tupleList.stream().filter(Objects::nonNull).iterator();
+        return tupleList.iterator();
     }
 
 }
