@@ -15,7 +15,6 @@ public class Join extends Operator {
     private OpIterator child2;
     // helper for fetchNext
     private Tuple t;
-    private boolean innerFinished;
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -32,7 +31,6 @@ public class Join extends Operator {
         this.child1 = child1;
         this.child2 = child2;
         this.t = null;
-        this.innerFinished = true;
     }
 
     public JoinPredicate getJoinPredicate() {
@@ -102,13 +100,12 @@ public class Join extends Operator {
      * @see JoinPredicate#filter
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        while (this.child1.hasNext() || !innerFinished) {
+        while (this.child1.hasNext() || this.t != null) {
             // check for the last one
-            if (this.child1.hasNext() && innerFinished) {
+            if (this.child1.hasNext() && this.t == null) {
                 this.t = this.child1.next();
             }
             while (this.child2.hasNext()) {
-                this.innerFinished = false;
                 Tuple t2 = this.child2.next();
                 if (this.p.filter(t, t2)) {
                     TupleDesc td1 = t.getTupleDesc();
@@ -124,13 +121,13 @@ public class Join extends Operator {
                     // if this is the last one, rewind too
                     if (!this.child2.hasNext()) {
                         this.child2.rewind();
-                        this.innerFinished = true;
+                        this.t = null;
                     }
                     return newTuple;
                 }
             }
             this.child2.rewind();
-            this.innerFinished = true;
+            this.t = null;
         }
         return null;
     }
