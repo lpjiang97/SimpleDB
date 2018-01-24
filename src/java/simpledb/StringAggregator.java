@@ -1,5 +1,10 @@
 package simpledb;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 /**
  * Knows how to compute some aggregate over a set of StringFields.
  */
@@ -7,6 +12,12 @@ public class StringAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
 
+    private int gbfield;
+    private Type gbfieldtype;
+    private int afield;
+    private Op what;
+
+    private Map<Field, Integer> groupMap;
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -17,7 +28,13 @@ public class StringAggregator implements Aggregator {
      */
 
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // some code goes here
+        if (!what.equals(Op.COUNT))
+            throw new IllegalArgumentException("Only COUNT is supported for String fields!");
+        this.gbfield = gbfield;
+        this.gbfieldtype = gbfieldtype;
+        this.afield = afield;
+        this.what = what;
+        this.groupMap = new HashMap<>();
     }
 
     /**
@@ -26,6 +43,13 @@ public class StringAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
+        StringField afield = (StringField) tup.getField(this.afield);
+        Field gbfield = tup.getField(this.gbfield);
+        String newValue = afield.getValue();
+        if (!this.groupMap.containsKey(gbfield))
+            this.groupMap.put(gbfield, 1);
+        else
+            this.groupMap.put(gbfield, this.groupMap.get(gbfield) + 1);
     }
 
     /**
@@ -37,8 +61,71 @@ public class StringAggregator implements Aggregator {
      *   aggregate specified in the constructor.
      */
     public OpIterator iterator() {
-        // some code goes here
-        throw new UnsupportedOperationException("please implement me for lab2");
+        return new AggregateIterator(this.groupMap, this.gbfieldtype);
+    }
+}
+
+class AggregateIterator implements OpIterator {
+
+    private Iterator<Map.Entry<Field, Integer>> it;
+    TupleDesc td;
+
+    private Map<Field, Integer> groupMap;
+    private Type gbfieldtype;
+
+    public AggregateIterator(Map<Field, Integer> groupMap, Type gbfieldtype) {
+        this.groupMap = groupMap;
+        this.gbfieldtype = gbfieldtype;
     }
 
+
+    @Override
+    public void open() throws DbException, TransactionAbortedException {
+        this.it = groupMap.entrySet().iterator();
+        // no grouping
+        if (groupMap.containsKey(null))
+            this.td = new TupleDesc(new Type[] {Type.INT_TYPE}, new String[] {"aggregateVal"});
+        else
+            this.td = new TupleDesc(new Type[] {this.gbfieldtype, Type.INT_TYPE}, new String[] {"groupVal", "aggregateVal"});
+    }
+
+    @Override
+    public boolean hasNext() throws DbException, TransactionAbortedException {
+        return it.hasNext();
+    }
+
+    @Override
+    public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
+        int value = 0;
+        Map.Entry<Field, Integer> entry = this.it.next();
+        Field f = entry.getKey();
+        Tuple rtn = new Tuple(this.td);
+        this.setFields(rtn, f == null, entry.getValue(), f);
+        return rtn;
+    }
+
+    @Override
+    public void rewind() throws DbException, TransactionAbortedException {
+        this.it = groupMap.entrySet().iterator();
+    }
+
+    @Override
+    public TupleDesc getTupleDesc() {
+        return this.td;
+    }
+
+    @Override
+    public void close() {
+        this.it = null;
+        this.td = null;
+    }
+
+    void setFields(Tuple rtn, boolean noGroup, int value, Field f) {
+        if (noGroup) {
+            rtn.setField(0, new IntField(value));
+        } else {
+            rtn.setField(0, f);
+            rtn.setField(1, new IntField(value));
+        }
+    }
 }

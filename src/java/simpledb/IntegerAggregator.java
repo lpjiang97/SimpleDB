@@ -1,5 +1,6 @@
 package simpledb;
 
+import com.sun.org.apache.bcel.internal.generic.LDC_W;
 import sun.text.normalizer.IntTrie;
 
 import java.util.*;
@@ -116,81 +117,63 @@ public class IntegerAggregator implements Aggregator {
         return new IntAggIterator();
     }
 
-    private class IntAggIterator implements OpIterator {
+    private class IntAggIterator extends AggregateIterator {
 
-        private Iterator<Map.Entry<Field, Integer>> it;
         private Iterator<Map.Entry<Field, List<Integer>>> avgIt;
         private boolean isAvg;
-        private TupleDesc td;
 
+        IntAggIterator() {
+            super(groupMap, gbfieldtype);
+            this.isAvg = (what.equals(Op.AVG));
+        }
 
         @Override
         public void open() throws DbException, TransactionAbortedException {
-            this.it = groupMap.entrySet().iterator();
-            this.isAvg = (what.equals(Op.AVG));
+            super.open();
             if (this.isAvg)
                 this.avgIt = avgMap.entrySet().iterator();
             else
                 this.avgIt = null;
-            // no grouping
-            if (groupMap.containsKey(null))
-                this.td = new TupleDesc(new Type[] {Type.INT_TYPE}, new String[] {"aggregateVal"});
-            else
-                this.td = new TupleDesc(new Type[] {gbfieldtype, Type.INT_TYPE}, new String[] {"groupVal", "aggregateVal"});
         }
 
         @Override
         public boolean hasNext() throws DbException, TransactionAbortedException {
             if (this.isAvg)
                 return avgIt.hasNext();
-            return it.hasNext();
+            return super.hasNext();
         }
 
         @Override
         public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-            int value = 0;
-            boolean noGroup = false;
-            Field f = null;
             if (this.isAvg) {
                 Map.Entry<Field, List<Integer>> entry = this.avgIt.next();
-                f = entry.getKey();
-                noGroup = f == null;
+                Field f = entry.getKey();
                 List<Integer> l = entry.getValue();
-                value = this.sumList(l) / l.size();
+                int value = this.sumList(l) / l.size();
+                Tuple rtn = new Tuple(td);
+                this.setFields(rtn, f == null, value, f);
+                return rtn;
             } else {
-                Map.Entry<Field, Integer> entry = this.it.next();
-                f = entry.getKey();
-                noGroup = f == null;
-                value = entry.getValue();
+                return super.next();
             }
-            Tuple rtn = new Tuple(this.td);
-            // no grouping
-            if (noGroup) {
-                rtn.setField(0, new IntField(value));
-            } else {
-                rtn.setField(0, f);
-                rtn.setField(1, new IntField(value));
-            }
-            return rtn;
         }
 
         @Override
         public void rewind() throws DbException, TransactionAbortedException {
-            this.it = groupMap.entrySet().iterator();
+            super.rewind();
             if (this.isAvg)
                 this.avgIt = avgMap.entrySet().iterator();
         }
 
         @Override
         public TupleDesc getTupleDesc() {
-            return this.td;
+            return super.getTupleDesc();
         }
 
         @Override
         public void close() {
-            this.it = null;
+            super.close();
             this.avgIt = null;
-            this.td = null;
         }
 
         private int sumList(List<Integer> l) {
