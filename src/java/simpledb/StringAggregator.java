@@ -44,8 +44,11 @@ public class StringAggregator implements Aggregator {
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
         StringField afield = (StringField) tup.getField(this.afield);
-        Field gbfield = tup.getField(this.gbfield);
+        Field gbfield = this.gbfield == NO_GROUPING ? null : tup.getField(this.gbfield);
         String newValue = afield.getValue();
+        if (gbfield != null && gbfield.getType() != this.gbfieldtype) {
+            throw new IllegalArgumentException("Given tuple has wrong type");
+        }
         if (!this.groupMap.containsKey(gbfield))
             this.groupMap.put(gbfield, 1);
         else
@@ -83,7 +86,7 @@ class AggregateIterator implements OpIterator {
     public void open() throws DbException, TransactionAbortedException {
         this.it = groupMap.entrySet().iterator();
         // no grouping
-        if (groupMap.containsKey(null))
+        if (this.gbfieldtype == null)
             this.td = new TupleDesc(new Type[] {Type.INT_TYPE}, new String[] {"aggregateVal"});
         else
             this.td = new TupleDesc(new Type[] {this.gbfieldtype, Type.INT_TYPE}, new String[] {"groupVal", "aggregateVal"});

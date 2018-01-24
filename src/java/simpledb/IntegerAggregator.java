@@ -56,10 +56,10 @@ public class IntegerAggregator implements Aggregator {
     public void mergeTupleIntoGroup(Tuple tup) {
         // get fields
         IntField afield = (IntField)tup.getField(this.afield);
-        Field gbfield = tup.getField(this.gbfield);
+        Field gbfield = this.gbfield == NO_GROUPING ? null : tup.getField(this.gbfield);
         int newValue = afield.getValue();
 
-        if (gbfield.getType() != this.gbfieldtype) {
+        if (gbfield != null && gbfield.getType() != this.gbfieldtype) {
             throw new IllegalArgumentException("Given tuple has wrong type");
         }
         // get number
