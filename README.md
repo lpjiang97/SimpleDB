@@ -2,6 +2,7 @@
 
 #### Version History:
 *   1/18/17 : Initial version
+*   1/24/18 : Added a test for scanning heapfiles that have empty pages in the middle
 
 ## DEADLINES
 ##### Part 1 Due: Wednesday, January 24, 2018
@@ -163,7 +164,7 @@ Notice that `BufferPool` asks you to implement a `flushAllPages()` method. This 
 
 *   `src/simpledb/BufferPool.java`
 
-If you did not implement `writePage()` in `HeapFile.java` above, you will also need to do that here. *For this lab, you do not need to implement `writePage()`.*
+If you did not implement `writePage()` in `HeapFile.java` above, you will also need to do that here.
 
 At this point, your code should pass the `EvictionTest` system test.
 
