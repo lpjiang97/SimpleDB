@@ -1,0 +1,153 @@
+\documentclass[10pt]{myland}
+\usepackage{amsmath}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\begin{center}
+	{\Large CSE 444: Homework 2} \\
+	\vspace{.05in} 
+    Linxing Preston Jiang \quad Winter 2018 \\
+	\vspace{.05in} 
+    \today \\
+\end{center}
+\vspace{.15in} \hrule \vspace{0.5em}%
+
+\section{B+ Trees}
+\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
+    \item See below
+    \begin{center}
+    \scalebox{0.5}{
+        \begin{tikzpicture}
+            %
+            \btreeinodefour{root}{80}{}{}{};
+            \xyshift{-80mm}{-20mm}{\btreeinodefour{root1l}{19}{25}{30}{60}}
+            \xyshift{40mm}{-20mm}{\btreeinodefour{root1r}{100}{120}{140}{}}
+            \btreelink{root-1}{root1l}
+            \btreelink{root-2}{root1r}
+            \xyshift{-180mm}{-40mm}{\btreeinodefour{leafa}{10}{15}{18}{}}
+            \xyshift{-130mm}{-40mm}{\btreeinodefour{leafb}{19}{20}{}{}}
+            \xyshift{-80mm}{-40mm}{\btreeinodefour{leafc}{25}{26}{27}{}}
+            \xyshift{-30mm}{-40mm}{\btreeinodefour{leafd}{40}{50}{}{}}
+            \xyshift{20mm}{-40mm}{\btreeinodefour{leafe}{60}{65}{70}{75}}
+            \xyshift{70mm}{-40mm}{\btreeinodefour{leaff}{80}{85}{90}{}}
+            \foreach \x\y in {1/a, 2/b, 3/c, 4/d, 5/e} {\btreelink{root1l-\x}{leaf\y}}
+            \btreelink{root1r-1}{leaff}
+            \node (empty1) at (120mm, -40mm){};
+            \node (empty2) at (130mm, -40mm){};
+            \node (empty3) at (140mm, -40mm){};
+            \path[btlink](root1r-2) edge (empty1);
+            \path[btlink](root1r-3) edge (empty2);
+            \path[btlink](root1r-4) edge (empty3);
+            \xyshift{120mm}{-40mm}{}
+            \path[btlink] (leafa-5) edge (leafb-1);
+            \path[btlink] (leafb-5) edge (leafc-1);
+            \path[btlink] (leafc-5) edge (leafd-1);
+            \path[btlink] (leafd-5) edge (leafe-1);
+            \path[btlink] (leafe-5) edge (leaff-1);
+            %%% values
+            \foreach \x/\y in {1/10, 2/15, 3/18} {
+                \node[below = 10mm of leafa-\x, btreevale] (leafa\x) {\y};
+                \path[btlink] (leafa-\x) edge (leafa\x);
+            }
+            \foreach \x/\y in {1/19, 2/20} {
+                \node[below = 10mm of leafb-\x, btreevale] (leafb\x) {\y};
+                \path[btlink] (leafb-\x) edge (leafb\x);
+            }
+            \foreach \x/\y in {1/25, 2/26, 3/27} {
+                \node[below = 10mm of leafc-\x, btreevale] (leafc\x) {\y};
+                \path[btlink] (leafc-\x) edge (leafc\x);
+            }
+            \foreach \x/\y in {1/40, 2/50} {
+                \node[below = 10mm of leafd-\x, btreevale] (leafd\x) {\y};
+                \path[btlink] (leafd-\x) edge (leafd\x);
+            }
+            \foreach \x/\y in {1/60, 2/65, 3/70, 4/75} {
+                \node[below = 10mm of leafe-\x, btreevale] (leafe\x) {\y};
+                \path[btlink] (leafe-\x) edge (leafe\x);
+            }
+            \foreach \x/\y in {1/80, 2/85, 3/90} {
+                \node[below = 10mm of leaff-\x, btreevale] (leaff\x) {\y};
+                \path[btlink] (leaff-\x) edge (leaff\x);
+            }
+        \end{tikzpicture}
+    }
+    \end{center}
+
+    \item See below
+    \begin{center}
+    \scalebox{0.5}{
+        \begin{tikzpicture}
+            %
+            \btreeinodefour{root}{80}{}{}{};
+            \xyshift{-80mm}{-20mm}{\btreeinodefour{root1l}{40}{60}{}{}}
+            \xyshift{40mm}{-20mm}{\btreeinodefour{root1r}{100}{120}{140}{}}
+            \btreelink{root-1}{root1l}
+            \btreelink{root-2}{root1r}
+            \xyshift{-130mm}{-40mm}{\btreeinodefour{leafb}{18}{19}{20}{}}
+            \xyshift{-70mm}{-40mm}{\btreeinodefour{leafd}{40}{50}{}{}}
+            \xyshift{-10mm}{-40mm}{\btreeinodefour{leafe}{60}{65}{70}{75}}
+            \xyshift{50mm}{-40mm}{\btreeinodefour{leaff}{80}{85}{90}{}}
+            \foreach \x\y in {1/b, 2/d, 3/e} {\btreelink{root1l-\x}{leaf\y}}
+            \btreelink{root1r-1}{leaff}
+            \node (empty1) at (120mm, -40mm){};
+            \node (empty2) at (130mm, -40mm){};
+            \node (empty3) at (140mm, -40mm){};
+            \path[btlink](root1r-2) edge (empty1);
+            \path[btlink](root1r-3) edge (empty2);
+            \path[btlink](root1r-4) edge (empty3);
+            \xyshift{120mm}{-40mm}{}
+            \path[btlink] (leafb-5) edge (leafd-1);
+            \path[btlink] (leafd-5) edge (leafe-1);
+            \path[btlink] (leafe-5) edge (leaff-1);
+            %%% values
+            \foreach \x/\y in {1/18, 2/19, 3/20} {
+                \node[below = 10mm of leafb-\x, btreevale] (leafb\x) {\y};
+                \path[btlink] (leafb-\x) edge (leafb\x);
+            }
+            \foreach \x/\y in {1/40, 2/50} {
+                \node[below = 10mm of leafd-\x, btreevale] (leafd\x) {\y};
+                \path[btlink] (leafd-\x) edge (leafd\x);
+            }
+            \foreach \x/\y in {1/60, 2/65, 3/70, 4/75} {
+                \node[below = 10mm of leafe-\x, btreevale] (leafe\x) {\y};
+                \path[btlink] (leafe-\x) edge (leafe\x);
+            }
+            \foreach \x/\y in {1/80, 2/85, 3/90} {
+                \node[below = 10mm of leaff-\x, btreevale] (leaff\x) {\y};
+                \path[btlink] (leaff-\x) edge (leaff\x);
+            }
+        \end{tikzpicture}
+    }
+    \end{center}
+
+
+    \item
+        \begin{itemize}
+            \item We need to look up 4 pages: 3 pages of index files, 1 page which contains the key 40
+            \item Same as above, 4 pages
+            \item We need to look up 4 pages to get to the key 60, and then we can keep reading from the page until
+                crossing to the next page with key 90 so \textbf{5} pages in total.
+            \item We need to look up 4 pages to get to the key 60, and then we can keep reading until the end of the
+                page. Then we need to go the next \textbf{index} file to find key 80, then read from the pointed data
+                file until 90 is read. So \textbf{6} pages in total.
+        \end{itemize}
+\end{enumerate}
+
+
+\section{Operator algorithms}
+
+\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
+    \item
+        \begin{itemize}
+            \item $\text{Cost} = B(R) + T(R)\cdot B(S) = 100 + 1000\cdot 80 = 80100$
+            \item $\text{Cost} = B(R) + B(R)\cdot B(S) = 100 + 100\cdot 80 = 8100$
+        \end{itemize}
+    \item The algorithm with the least cost would be block-nested-looped. The cost is
+    \[\text{Cost} = B(R) + \frac{B(R)\cdot B(S)}{M - 1} = 100 + \frac{100\cdot 80}{10 - 1} = \frac{8900}{9}\]
+    \item The index-based nested loop join will iterate over R, for each tuple in R, fetch the corresponding tuples from
+    S. If we assume there is exactly one match for every tuple in S, then for every tuple in R we make 1 disk access of
+    S. So the total cost is $B(R) + T(R) * 1 = B(R) + T(R)$
+\end{enumerate}
+
+\end{document}
