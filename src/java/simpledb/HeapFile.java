@@ -145,18 +145,14 @@ public class HeapFile implements DbFile {
             TransactionAbortedException {
         // some code goes here
         ArrayList<Page> pageList = new ArrayList<>();
-        for (int i = 0; i < this.numPages(); i++) {
-            // took care of getting a new page
-            HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(this.getId(), i),
+
+        // get the page which has this tuple
+        HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid, t.getRecordId().getPageId(),
                     Permissions.READ_WRITE);
-            try {
-                p.deleteTuple(t);
-                p.markDirty(true, tid);
-            } catch (DbException e) {
-                // is already empty, or no such element, keep checking
-            }
-        }
-        throw new DbException("Cannot delete tuple");
+        p.deleteTuple(t);
+        p.markDirty(true, tid);
+        pageList.add(p);
+        return pageList;
     }
 
     // see DbFile.java for javadocs
