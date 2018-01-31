@@ -151,7 +151,7 @@ public class BufferPool {
     public void insertTuple(TransactionId tid, int tableId, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
         DbFile f = Database.getCatalog().getDatabaseFile(tableId);
-        f.insertTuple(tid, t);
+        updateBufferPool(f.insertTuple(tid, t), tid);
     }
 
     /**
@@ -170,7 +170,7 @@ public class BufferPool {
     public  void deleteTuple(TransactionId tid, Tuple t)
         throws DbException, IOException, TransactionAbortedException {
         DbFile f = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
-        f.deleteTuple(tid, t);
+        updateBufferPool(f.deleteTuple(tid, t), tid);
     }
 
     /**
@@ -218,7 +218,7 @@ public class BufferPool {
             // write to disk
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(p);
             // unmark dirty status
-            p.markDirty(false, tid);
+            p.markDirty(false, null);
         }
     }
 
@@ -240,4 +240,13 @@ public class BufferPool {
         this.discardPage(pid);
     }
 
+    private void updateBufferPool(ArrayList<Page> pagelist, TransactionId tid) throws DbException {
+        for (Page p : pagelist) {
+            p.markDirty(true, tid);
+            // update bufferpool
+            if (this.pageMap.size() > this.numPages)
+                this.evictPage();
+            this.pageMap.put(p.getId(), p);
+        }
+    }
 }

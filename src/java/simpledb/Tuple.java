@@ -110,4 +110,23 @@ public class Tuple implements Serializable {
     {
         this.td = td;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Tuple))
+            return false;
+        boolean rtn = this.rid.equals(((Tuple) obj).rid) && this.td.equals(((Tuple) obj).td);
+        rtn &= this.fields.length == ((Tuple) obj).fields.length;
+        // field comparison
+        for (int i = 0; i < this.fields.length; i++) {
+            rtn &= (this.fields[i].equals(((Tuple) obj).fields[i]));
+        }
+        return rtn;
+    }
+
+    // not sure if this will be used
+    @Override
+    public int hashCode() {
+        return this.td.hashCode() + 31 * this.rid.hashCode() + 37 * Arrays.hashCode(this.fields);
+    }
 }

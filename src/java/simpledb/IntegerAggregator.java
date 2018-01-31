@@ -1,7 +1,6 @@
 package simpledb;
 
 import com.sun.org.apache.bcel.internal.generic.LDC_W;
-import sun.text.normalizer.IntTrie;
 
 import java.util.*;
 

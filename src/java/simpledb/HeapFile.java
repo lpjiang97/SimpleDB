@@ -121,7 +121,6 @@ public class HeapFile implements DbFile {
                     Permissions.READ_WRITE);
             if (p.getNumEmptySlots() == 0)
                 continue;
-            p.markDirty(true, tid);
             p.insertTuple(t);
             pageList.add(p);
             return pageList;
@@ -134,7 +133,6 @@ public class HeapFile implements DbFile {
         // load into cache
         HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(this.getId(),  this.numPages() - 1),
                     Permissions.READ_WRITE);
-        p.markDirty(true, tid);
         p.insertTuple(t);
         pageList.add(p);
         return pageList;
@@ -145,12 +143,10 @@ public class HeapFile implements DbFile {
             TransactionAbortedException {
         // some code goes here
         ArrayList<Page> pageList = new ArrayList<>();
-
         // get the page which has this tuple
         HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid, t.getRecordId().getPageId(),
                     Permissions.READ_WRITE);
         p.deleteTuple(t);
-        p.markDirty(true, tid);
         pageList.add(p);
         return pageList;
     }
