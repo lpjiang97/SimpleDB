@@ -1,103 +1,100 @@
 \documentclass[10pt]{myland}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE TITLE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 \begin{center}
-	{\Large \myhwname} \\
+	{\Large \myhwname{CSE 444: Lab 2 Writeup}} \\
 	\vspace{.05in}
-    \myname\quad\quarter \\
+    \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
 	\vspace{.05in}
     \today \\
 \end{center}
 \vspace{.15in} \hrule \vspace{0.5em}%
 
-%%%%% SECTION 1 %%%%%
+
 \begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
+    \item Query runtime
+        \begin{itemize}
+            \item Query 1: 1.53 seconds (\texttt{attu4})
+            \item Query 2: Because of nested-loop-join implementation, Query 2 takes forever to finish (did not finish
+                after an eight hour tmux session on \texttt{attu4})
+            \item Query 3: Same as above
+        \end{itemize}
 	\item
-	Lab 1 contains necessary methods for constructing databases and operators for query plan execution (just reading
-	from file in Lab 1 with \texttt{SeqScan}). Key componants implemented are:
+	Lab 2 consists two major parts: operators \& aggregates, and database mutability. For the first part, we implemented
+    \texttt{Filter}, \texttt{Join} operator and common aggregates such as \texttt{MIN, MAX, AVG}. For the second part,
+    we focused on the implementation of inserting/deleting tuples to and from the database, also the eviction of pages
+    in \texttt{BufferPool} when it's full. Key components implemented are:
 	\begin{itemize}
-		\item \texttt{Tuple}: this presents a single record (row) in a relation
-		\item \texttt{TupleDesc}: this defines the schema of a relation (the number of fields, )
-		\item \texttt{Catalog}: this stores information of all relations (tables) currently in the database, including the file, name, and the name of the primary key
-		\item \texttt{BufferPool}: this caches the pages recently read by \texttt{DbFile} for good locality performance
-		\item \texttt{HeapPage}: this stores the actual data (\texttt{byte} array) stored in a page
-		\item \texttt{HeapFile}: this represents a file stored on disk as a collection of \texttt{HeapPage}
-		\item \texttt{SeqScan}: this implements sequential scan operator for reading from tuples from \texttt{HeapFile}
+        \item \texttt{Predicate}: this defines a predicate (comparision) which can be used in operators such as
+            \texttt{Filter} and \texttt{Join}.
+		\item \texttt{Join}: I chose to implement nested-loop-join.
+		\item \texttt{Aggregates}: this represents an aggregation clause, can be on \texttt{Integer} or \texttt{String}
+            fields.
+		\item \texttt{HeapPage}: We added \texttt{insert}, \texttt{delete} in it, which insert/delete tuples to/from the
+            \texttt{tuple} array and mark the corresponding slots to used/free.
+        \item \texttt{HeapFile}: We added \texttt{insert}, \texttt{delete} in it, which obtains the page from
+            \texttt{BufferPool} (Or add a new empty page when added) and calls the \texttt{insert/delete} from
+            \texttt{HeapPage}. Also, we added \texttt{writePage} method which is needed later for \texttt{BufferPool}
+		\item \texttt{BufferPool}: We added \texttt{insert}, \texttt{delete} in it, which insert/delete tuples to/from the
+            pages in BufferPool by calling the method from \texttt{HeapFile} to update the page, then \texttt{BufferPool}
+            updates the records by re-inserting the pages into the \texttt{BufferPool}. When the \texttt{BufferPool} is
+            full and a new page need adding, \texttt{writePage} from \texttt{HeapFile} will be called to write the dirty
+            page to disk and add the new page into the \texttt{BufferPool}
 	\end{itemize}
-    Putting them together, the workflow of a simple reading query is \\
-    SQL Query: \texttt{SELECT * FROM EXAMPLE} \\
-
-    Workflow (\texttt{open()}): \\
+    \par Examples:
+    \par Workflow (\texttt{join()}, showing \texttt{next()} call): \\
     \begin{center}
         \begin{tikzpicture}[
-            scale=.6,
+            scale=.5,
         ]
-            \path[->, thick] (-3, -0.5) edge node[midway, above] {start} (0, -0.5);
-            \draw[draw=black] (0, 0) rectangle (3, -1) node[midway]  {\texttt{SeqScan}};
-            \node (seq) at (3, -0.5) {};
-            \draw[draw=black] (6, 0) rectangle (9, -1) node[midway] {\texttt{HeapFile}};
-            \node (heapfilel) at (6, -0.5) {};
-            \node (heapfiler) at (9, -0.5) {};
-            \path[->] (seq) edge node[midway, above] {\texttt{open}} (heapfilel);
-            \draw[draw=black] (12, 0) rectangle (21, -1) node[midway] {\texttt{HeapPage(with Tuples)}};
-            \node (pagel) at (12, -0.5) {};
-            \node (pager) at (21, -0.5) {};
-            \node (pageu) at (16.5, 0) {};
-            \node (paged) at (16.5, -1) {};
-            \path[->] (heapfiler) edge node[midway, above] {\texttt{open}} (pagel);
-            \draw[draw=black] (15, 5) rectangle (18, 4) node[midway] {\texttt{Disk}};
-            \node (disk) at (16.5, 4) {};
-            \path[->] (disk) edge node[midway, left] {\texttt{readPage}} (pageu);
-            \draw[draw=black] (14.5, -5) rectangle (18.5, -4) node[midway] {\texttt{BufferPool}};
-            \node (buffer) at (16.5, -4) {};
-            \path[->] (buffer) edge node[midway, left] {\texttt{cache page}} (paged);
-            % catalog
-            \draw[draw=black] (6, 3) rectangle (9, 2) node[midway] {\texttt{Catalog}};
-            \path[->] (7.5, 2) edge node[midway, left] {\texttt{DbFile}} (7.5, 0);
-            \node (name) at (3, 4.5) {EXAMPLE};
-            \path[->] (6, 3) edge node[midway, right] {\texttt{Name}} (name);
+            \path[->, thick] (0, 3) edge node[midway, above] {...(father opertor \texttt{next})} (0, 0);
+            \draw[draw=black] (-1.5, 0) rectangle (1.5, -1) node[midway]  {\texttt{Join}};
+            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{child1.next()}} (-5, -2.5);
+            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{child2.next()}} (5, -2.5);
+            \draw[draw=black] (-8.5, -2.5) rectangle (-1.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
+            \draw[draw=black] (1.5, -2.5) rectangle (8.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
+            \path[->, thick] (-5, -3.5) edge node[midway, above] {} (0, -4.5);
+            \path[->, thick] (5, -3.5) edge node[midway, above] {} (0, -4.5);
+            \draw[draw=black] (-2.5, -4.5) rectangle (2.5, -5.5) node[midway]  {\texttt{JoinPredicte}};
+            \path[->, thick] (0, -5.5) edge node[midway] {\texttt{JoinPredicate.filter}} (0, -7.5);
+            \draw[draw=black] (-2.5, -7.5) rectangle (2.5, -8.5) node[midway]  {\texttt{Return Tuple}};
+            \node (father) at (10, 3) {};
+            \path[->, thick, color=red] (0, -8.5) edge [bend right=120] node[midway] {return to father \texttt{next} call} (father);
         \end{tikzpicture}
     \end{center}
 
-    Workflow (\texttt{next()}): \\
+    Workflow (\texttt{insertTuple()}): \\
     \begin{center}
         \begin{tikzpicture}[
-            scale=.6,
+            scale=0.7,
         ]
-            \path[->, thick] (-3, -0.5) edge node[midway, above] {start} (0, -0.5);
-            \draw[draw=black] (0, 0) rectangle (3, -1) node[midway]  {\texttt{SeqScan}};
-            \node (seq) at (3, -0.5) {};
-            \draw[draw=black] (6, 0) rectangle (9, -1) node[midway] {\texttt{HeapFile}};
-            \node (heapfilel) at (6, -0.5) {};
-            \node (heapfiler) at (9, -0.5) {};
-            \path[->] (seq) edge node[midway, above] {\texttt{next}} (heapfilel);
-            \draw[draw=black] (12, 0) rectangle (21, -1) node[midway] {\texttt{HeapPage(with Tuples)}};
-            \node (pagel) at (12, -0.5) {};
-            \node (pager) at (21, -0.5) {};
-            \node (pageu) at (16.5, 0) {};
-            \node (paged) at (16.5, -1) {};
-            \path[->] (heapfiler) edge node[midway, above] {\texttt{next}} (pagel);
-            \draw[draw=black] (15, 5) rectangle (18, 4) node[midway] {\texttt{Disk}};
-            \node (disk) at (16.5, 4) {};
-            \draw[draw=black] (14.5, -5) rectangle (18.5, -4) node[midway] {\texttt{BufferPool}};
-            \node (buffer) at (16.5, -4) {};
-            \path[->] (buffer) edge node[midway, left] {\texttt{read tuple}} (paged);
-            \path[->] (pageu) edge [bend right] node[midway, above] {\texttt{return tuple}} (7.5, 0) ;
-            \path[->] (7.5, -1) edge [bend left] node[midway, below] {\texttt{return tuple}} (1.5, -1) ;
-            \draw[draw=black] (6, 3) rectangle (9, 2) node[midway] {\texttt{Catalog}};
-            \path[->] (7.5, 2) edge node[midway, left] {\texttt{DbFile}} (7.5, 0);
-            \node (name) at (3, 4.5) {EXAMPLE};
-            \path[->] (6, 3) edge node[midway, right] {\texttt{Name}} (name);
+            \path[->, thick] (0, 2) edge node[midway, above] {\texttt{insert}} (0, 0);
+            \draw[draw=black] (-1.5, 0) rectangle (1.5, -1) node[midway]  {\texttt{BufferPool}};
+            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{insert}} (0, -3);
+            \draw[draw=black] (-1.5, -3) rectangle (1.5, -4) node[midway]  {\texttt{HeapFile}};
+            \path[->, thick] (0, -4) edge node[midway, above] {\texttt{insert}} (0, -6);
+            \draw[draw=black] (-3, -6) rectangle (3, -7) node[midway]  {\texttt{Page in BufferPool?}};
+            \path[->, thick] (0, -7) edge node[midway, above] {\texttt{yes}} (-3, -9);
+            \path[->, thick] (0, -7) edge node[midway, above] {\texttt{no}} (6, -9);
+            \draw[draw=black] (-5, -9) rectangle (-1, -10) node[midway]  {\texttt{Return Page}};
+            \draw[draw=black] (-0.5, -9) rectangle (15, -10) node[midway]  {\texttt{pull a new page (evict if needed)}};
+            \path[->, thick] (-3.5, -10) edge node[midway, above] {\texttt{insertTuple}} (0, -12);
+            \path[->, thick] (7, -10) edge node[midway, above] {\texttt{insertTuple}} (0, -12);
+            \draw[draw=black] (-3, -12) rectangle (3, -13) node[midway]  {updated \texttt{HeapPage}};
+            \path[->, thick, color=red] (-3, -12.5) edge [bend left=80] node[midway, rotate=80] {reinsert to \texttt{BufferPool
+                to update record}} (-1.5, -0.5);
         \end{tikzpicture}
     \end{center}
 
-    \item Design decisions: I followed the instructions in README and didn't make extra design decisions.
-    \item Extra Unit tests: A unit test for the correctness of \texttt{HeapPage.iterator()} would be nice. My initial
-          implementation was wrong because I include the tuples in the empty slot, but the unit tests in \texttt{HeapPageIdTest}
-          and \texttt{HeapPageReadTest} did not catch this error. It only showed up when I run \texttt{ScanTest} after
-          finishing everything, and it was a little hard to connect the dots back to this method.
+    \item Design decisions: I chose to use nested loop join. For eviction policy, I chose to evict the first page every
+        time the \texttt{BufferPool} is full.
+    \item Extra Unit tests: A unit test for the correctness of HeapFile insertTuple behavior would be great. The spec
+        requires the update of \texttt{BufferPool} pages to happen in the insert/delete methods of \texttt{BufferPool}
+        instead of in \texttt{HeapFile}. I did it the wrong way and caused the \texttt{handleManyDirty} test to fail, and
+        it took me a while to realize that test uses a overriden \texttt{insert} method and \texttt{BufferPool} should
+        be in charge of updating the record.
     \item Changes to API: I did not make changes to the APIs given.
-    \item Missing elements: I believe I finished the entire Lab 1
+    \item Missing elements: I believe I finished the entire Lab 2
 \end{enumerate}
 \end{document}
