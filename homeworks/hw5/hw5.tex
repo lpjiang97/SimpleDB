@@ -1,0 +1,45 @@
+\documentclass[10pt]{myland}
+\usepackage{amsmath}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\begin{center}
+	{\Large \myhwname{CSE 444: Homework 5}} \\
+	\vspace{.05in}
+    \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
+	\vspace{.05in}
+    \today \\
+\end{center}
+\vspace{.15in} \hrule \vspace{0.5em}%
+
+\section{Query Plan Cost Computation}
+\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
+  \item 
+    \begin{enumerate}[label=\textbf{(\alph*)}, listparindent=0.0em, itemsep=1em] 
+      \item $\frac{9000 - 100}{9000 - 0} \cdot \frac{1000 - 0 + 1}{9000 - 0} = \frac{89089}{810000} \approx 0.110$
+      \item $\frac{1}{V(S, e)}\cdot\frac{1}{V(S, f)} = \frac{1}{10}\cdot\frac{1}{100} = \frac{1}{1000}$
+      \item $\frac{1}{\max\{V(R, c), V(S, d)\}} = \frac{1}{50}$
+      \item $\frac{1}{V(R, b)} + \frac{1}{V(R, b)} = \frac{1}{50}$
+      \item $\frac{1}{\max\{V(S, g), V(T, h)\}} = \frac{1}{100}$
+    \end{enumerate}
+  \item 
+    \begin{itemize}
+      \item $|R_1| = 10000\cdot 0.11 = 1100$
+      \item $|R_2| = 10000\cdot\frac{1}{1000} = 10$
+      \item $|R_3| = \frac{1100\cdot 10}{50} = 220$
+      \item $|R_4| = \frac{220}{50} = \lceil 4.4\rceil = 5$
+      \item $|R_5| = \frac{5\cdot 10000}{100} = 500$
+      \item $|R_6| = |R_5| = 500$
+    \end{itemize}
+  \item 
+    \begin{enumerate}[label=\textbf{(\alph*)}, listparindent=0.0em, itemsep=1em] 
+      \item Because of the clustered index on $a$, we have $B(R)\cdot 0.11 = 110$ IOs to read from R. And the unclustered index 
+        on (e, f) will help reduce the number of IOs to $d$
+    \end{enumerate}
+\end{enumerate}
+
+
+\section{Query Optimization}
+\end{document}
