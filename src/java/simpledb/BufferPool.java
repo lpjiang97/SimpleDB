@@ -32,6 +32,7 @@ public class BufferPool {
     private final int numPages;
     private final Map<PageId, Page> pageMap;
 
+    private LockManager lm = LockManager.getInstance();
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
