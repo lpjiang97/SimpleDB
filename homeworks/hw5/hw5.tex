@@ -72,8 +72,8 @@
       WR & 10 + 10 * 100 = 1010 page IOs &  100 records on 20 pages & Nested loop join of W (outer) R & K \\ \hline
       \tikzmark{StartA}SW & ... & ... & ... & P \tikzmark{EndA}\\\hline 
       \tikzmark{StartB}WS & ... & ... & ... & P \tikzmark{EndB}\\\hline 
-      RSW & 100100 + 2K + 2K * 10  = 122,100 & 1K records on 300 pages & Nested loop join of RS (outer) W & P \\ \hline
-      \tikzmark{StartC}WRS & 1010 + 20 + 20 * 1K = 21030 & 1K records on 300 pages & Nested loop join of WR (outer) S & K \tikzmark{EndC} \\ \hline
+      RSW & 100100 + 2K * 10  = 120,100 & 1K records on 300 pages & Nested loop join of RS (outer) W & P \\ \hline
+      \tikzmark{StartC}WRS & 1010 + 20 * 1K = 21,010 & 1K records on 300 pages & Nested loop join of WR (outer) S & K \tikzmark{EndC} \\ \hline
 		\end{tabularx}
     \DrawLine[red, thick]{StartA}{EndA}
     \DrawLine[red, thick]{StartB}{EndB}
@@ -81,6 +81,26 @@
         \node[draw, red] at ($(EndA)+(14ex,-1ex)$) {\small{ Cartesian Product }};
     \end{tikzpicture}%
     \DrawRect[red, thick]{StartC}{EndC}{Best}
+    \par The physical plan is shown here: \par
+    \begin{center}
+    \begin{tikzpicture}[
+      scale=.6,
+    ]
+      \node (W) at(-20, 0) {\texttt{W}};
+      \node[right=3cm of W] (R) {\texttt{R}};
+      \node[above right=1.5cm and 1.5cm of W] (WR) {$\bowtie_{\texttt{R.c = W.h}}$};
+      \node[draw, left=0.6cm of WR] (WRtext) {Nested Loop Join};
+      \path (W) edge (WR);
+      \path (R) edge (WR);
+      \node[above right=1.5cm and 1.5cm of WR] (WRS) {$\bowtie_{\texttt{R.a = S.d}}$};
+      \node[right=3cm of R] (S) {\texttt{S}};
+      \path (WR) edge (WRS);
+      \path (S) edge (WRS);
+      \node[draw, left=0.6cm of WRS] (WRStext) {Nested Loop Join};
+      \node[above=1.5cm of WRS] (final) {$\pi_{*}$};
+      \path (WRS) edge (final);
+    \end{tikzpicture}%
+    \end{center}
   %%%%%
   \item 
     \begin{itemize}
