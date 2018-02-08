@@ -1,6 +1,18 @@
 \documentclass[10pt]{myland}
-\usepackage{amsmath}
 
+\renewcommand{\tikzmark}[1]{\tikz[overlay,remember picture] \node (#1) {};}
+\newcommand{\DrawLine}[3][]{%
+    \begin{tikzpicture}[overlay,remember picture]
+        \draw [#1] ($(#2)+(-5ex,0.6ex)$) -- ($(#3)+(5ex,0.6ex)$);
+    \end{tikzpicture}%
+}%
+
+\newcommand{\DrawRect}[4][]{%
+    \begin{tikzpicture}[overlay,remember picture]
+        \draw [#1] ($(#2)+(-9ex,-2.6ex)$) rectangle ($(#3)+(11ex,3.2ex)$);
+        \node [#1, draw] at ($(#3)+(15ex, 0.6ex)$) {#4};
+    \end{tikzpicture}%
+}%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -18,7 +30,7 @@
 \begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
   \item 
     \begin{enumerate}[label=\textbf{(\alph*)}, listparindent=0.0em, itemsep=1em] 
-      \item $\frac{9000 - 100}{9000 - 0} \cdot \frac{1000 - 0 + 1}{9000 - 0} = \frac{89089}{810000} \approx 0.110$
+      \item $\frac{1000 - 100}{9000 - 0} = \frac{1}{10}$
       \item $\frac{1}{V(S, e)}\cdot\frac{1}{V(S, f)} = \frac{1}{10}\cdot\frac{1}{100} = \frac{1}{1000}$
       \item $\frac{1}{\max\{V(R, c), V(S, d)\}} = \frac{1}{50}$
       \item $\frac{1}{V(R, b)} + \frac{1}{V(R, b)} = \frac{1}{50}$
@@ -26,20 +38,80 @@
     \end{enumerate}
   \item 
     \begin{itemize}
-      \item $|R_1| = 10000\cdot 0.11 = 1100$
+      \item $|R_1| = 10000\cdot 0.1 = 1000$
       \item $|R_2| = 10000\cdot\frac{1}{1000} = 10$
-      \item $|R_3| = \frac{1100\cdot 10}{50} = 220$
-      \item $|R_4| = \frac{220}{50} = \lceil 4.4\rceil = 5$
-      \item $|R_5| = \frac{5\cdot 10000}{100} = 500$
-      \item $|R_6| = |R_5| = 500$
+      \item $|R_3| = \frac{1000\cdot 10}{50} = 200$
+      \item $|R_4| = \frac{200}{50} = 4$
+      \item $|R_5| = \frac{4\cdot 10000}{100} = 400$
+      \item $|R_6| = |R_5| = 400$
     \end{itemize}
   \item 
     \begin{enumerate}[label=\textbf{(\alph*)}, listparindent=0.0em, itemsep=1em] 
-      \item Because of the clustered index on $a$, we have $B(R)\cdot 0.11 = 110$ IOs to read from R. And the unclustered index 
-        on (e, f) will help reduce the number of IOs to $d$
+      \item Because of the clustered index on $a$, we have $B(R)\cdot 0.10 = 100$ IOs to read from R. And the unclustered index 
+        on (e, f) will help reduce the number of IOs to $B(S)\cdot \frac{1}{1000} = 10$ pages. We do not write intermediate results
+        to disk, so the next IO cost comes from reading from $T$, which will have $T(R_4) \cdot \frac{B(T)}{V(T, h)} = 4\cdot 
+        \frac{1000}{100} = 40$. There the total cost is 
+        \[100 + 10 + 40 = 150\]
     \end{enumerate}
+
 \end{enumerate}
 
-
+\newpage
 \section{Query Optimization}
+\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
+  \item See table \par
+    \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y}
+			\hline
+      \textbf{Subqeury} & \textbf{Cost} & \textbf{Size of ouptut} & \textbf{Plan} & \textbf{P/K} \\ \hline
+      R & 100 page IOs & 1K records on 100 pages & Sequential scan of R & K \\ \hline
+      S & 1K page IOs & 10K records on 1K pages & Sequential scan of S & K \\ \hline
+      W & 10 page IOs & 100 records on 10 pages & Sequential scan of W & K \\ \hline
+      RS & 100 + 100 * 1000 = 100100 page IOs & 10K records on 2K pages & Nested loop join of R (outer) S & K \\ \hline
+      RW & 100 + 100 * 10 = 1100 page IOs & 100 records on 20 pages & Nested loop join of R (outer) W & P (WR has lower IO cost) \\ \hline
+      SR & 1000 + 1000 * 100 = 101000 page IOs & 10K records on 2K pages & Nested loop join of S (outer) R & P (RS has lower IO cost) \\ \hline
+      WR & 10 + 10 * 100 = 1010 page IOs &  100 records on 20 pages & Nested loop join of W (outer) R & K \\ \hline
+      \tikzmark{StartA}SW & ... & ... & ... & P \tikzmark{EndA}\\\hline 
+      \tikzmark{StartB}WS & ... & ... & ... & P \tikzmark{EndB}\\\hline 
+      RSW & 100100 + 2K + 2K * 10  = 122,100 & 1K records on 300 pages & Nested loop join of RS (outer) W & P \\ \hline
+      \tikzmark{StartC}WRS & 1010 + 20 + 20 * 1K = 21030 & 1K records on 300 pages & Nested loop join of WR (outer) S & K \tikzmark{EndC} \\ \hline
+		\end{tabularx}
+    \DrawLine[red, thick]{StartA}{EndA}
+    \DrawLine[red, thick]{StartB}{EndB}
+    \begin{tikzpicture}[overlay,remember picture]
+        \node[draw, red] at ($(EndA)+(14ex,-1ex)$) {\small{ Cartesian Product }};
+    \end{tikzpicture}%
+    \DrawRect[red, thick]{StartC}{EndC}{Best}
+  %%%%%
+  \item 
+    \begin{itemize}
+      \item Clustered index on \texttt{R.b}: Because of the selection \texttt{R.b > 100}, this index will help reduce the number of reads from 
+        \texttt{R} by the selectivity of \texttt{R.b > 100}.
+       \item Unclusted index on \texttt{S.d}: It depends on the estimated number of tuples from \texttt{R} to be read. Because we are joining 
+        \texttt{R.a} and \texttt{S.d}, if the number of tuples from \texttt{R} is more than the number of pages from \texttt{S}, we should
+        just perform a file scan because every read from an unclustered index can be on a new page. Otherwise, we can choose to use this 
+        unclustered index to reduce the number of reads from \texttt{S}.
+    \end{itemize}
+  %%%%%
+  \item An interesting order means an intermediate join which has a higher cost leads to a lower cost in the end. It can either be the order
+    of tuples satisfying the order required by \texttt{ORDER BY} or \texttt{GROUP BY}, or the order on a equality-join will enable cheaper
+    sort-merge join in the next step. For example, assume we have a hash index on \texttt{R.a}, a B+ tree clustered on \texttt{W.c}, see 
+    the following query: \begin{lstlisting}
+  SELECT *
+  FROM R, S, W
+  WHERE R.a = S.b
+    AND S.b = W.c;
+    \end{lstlisting}
+    For the step of joining \texttt{R} and \texttt{S}, an interesting order can be obtained by using a sorted-merge join, because for the 
+    next step of joining with \texttt{W.c}, the tuples of \texttt{S.b} is already sorted and so is \texttt{W.c} using the B+ tree clustered
+    index. Here's another example: \begin{lstlisting}
+  SELECT SUM(R.a)
+  FROM R, S, W
+  WHERE R.a = S.b
+    AND R.c = W.c
+  GROUP BY S.b;
+    \end{lstlisting}
+    Now an interesting order is using sorted-merge-join on \texttt{R.a} and \texttt{S.b} because it will dramatically speed up the \texttt{GROUP BY}
+    clause since every tuple is sorted on the \texttt{GROUP BY} field {S.b}.
+     
+\end{enumerate}
 \end{document}
