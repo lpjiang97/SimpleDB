@@ -75,6 +75,7 @@ public class BufferPool {
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
+        lm.acquire(tid, pid, perm);
         if (pid == null)
             return null;
 
