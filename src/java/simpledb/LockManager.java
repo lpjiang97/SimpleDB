@@ -83,9 +83,11 @@ public class LockManager {
         this.notifyAll();
     }
 
-    public static void main(String[] args) {
-        Map<String, String> m = new HashMap<>();
-        System.out.println(m.get(null));
+    public boolean holdsLock(TransactionId tid, PageId pid) {
+        Lock l = null;
+        if (this.pageMap.get(tid) == null || !this.pageMap.get(tid).contains(pid) || (l = this.lockMap.get(pid)) == null)
+            return false;
+        return l.hasTid(tid);
     }
 }
 

@@ -103,6 +103,7 @@ public class BufferPool {
     public  void releasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        lm.release(tid, pid);
     }
 
     /**
@@ -119,7 +120,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return lm.holdsLock(tid, p);
     }
 
     /**
