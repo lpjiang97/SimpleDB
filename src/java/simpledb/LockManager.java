@@ -40,8 +40,6 @@ public class LockManager {
             throws TransactionAbortedException {
         // check if this transaction has a set of page ids yet
         this.pageMap.putIfAbsent(tid, new HashSet<>());
-        // add page ID
-        this.pageMap.get(tid).add(pid);
         // check if there is a lock for this page id yet
         this.lockMap.putIfAbsent(pid, new Lock((short)perm.permLevel));
         // get lock
@@ -50,17 +48,18 @@ public class LockManager {
             // if this lock is obtained by tid already
             if(l.hasTid(tid)) {
                 // can I upgrade?
-                if (l.getRefCount() == 1 && perm.permLevel == 1 && l.getType() == 0) {
+                if (l.getRefCount() == 1 && perm.equals(Permissions.READ_WRITE) && l.getType() == Lock.SHARED) {
                     l.upgrade();
                     return;
                 }
-                // if we want shared, or we want exclusive and we have it
-                if ((perm.permLevel == Lock.SHARED) || (perm.permLevel ==  1 && l.getType() == Lock.EXCLUSIVE))
+                // we want shared OR we want exclusive and we have it
+                if ((perm.permLevel == Lock.SHARED) || (perm.equals(Permissions.READ_WRITE) && l.getType() == Lock.EXCLUSIVE))
                     return;
             } else { // new tid is trying to get lock which is already obtained
                 // if it's shared lock, it's okay
-                if (perm.permLevel == l.getType() && l.getType() == Lock.SHARED) {
+                if (perm.equals(Permissions.READ_ONLY) && l.getType() == Lock.SHARED) {
                     l.lock(tid);
+                    this.pageMap.get(tid).add(pid);
                     return;
                 }
             }
@@ -73,6 +72,15 @@ public class LockManager {
         }
         // get the lock
         l.lock(tid);
+        this.pageMap.get(tid).add(pid);
+    }
+
+    public synchronized void release(TransactionId tid, PageId pid) {
+        Lock l = this.lockMap.get(pid);
+        l.unlock(tid);
+        // remove this page from page set of tid
+        this.pageMap.get(tid).remove(pid);
+        this.notifyAll();
     }
 
     public static void main(String[] args) {
