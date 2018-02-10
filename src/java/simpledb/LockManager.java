@@ -100,7 +100,7 @@ public class LockManager {
      * @throws IllegalArgumentException if tid or pid does not have a lock to release
      */
     public synchronized void release(TransactionId tid, PageId pid) {
-        if (holdsLock(tid, pid))
+        if (!holdsLock(tid, pid))
             throw new IllegalArgumentException("This tid or pid does not have a lock!");
         Lock l = this.lockMap.get(pid);
         l.unlock(tid);
