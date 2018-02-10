@@ -83,11 +83,16 @@ public class LockManager {
         this.notifyAll();
     }
 
-    public boolean holdsLock(TransactionId tid, PageId pid) {
+    public synchronized boolean holdsLock(TransactionId tid, PageId pid) {
         Lock l = null;
         if (this.pageMap.get(tid) == null || !this.pageMap.get(tid).contains(pid) || (l = this.lockMap.get(pid)) == null)
             return false;
         return l.hasTid(tid);
+    }
+
+    public synchronized void reset() {
+        this.pageMap = new ConcurrentHashMap<>();
+        this.lockMap = new ConcurrentHashMap<>();
     }
 }
 

@@ -32,7 +32,7 @@ public class BufferPool {
     private final int numPages;
     private final Map<PageId, Page> pageMap;
 
-    private LockManager lm = LockManager.getInstance();
+    private LockManager lm;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -42,6 +42,9 @@ public class BufferPool {
     public BufferPool(int numPages) {
         this.numPages = numPages;
         this.pageMap = new ConcurrentHashMap<>();
+        // lock manager, reset when BufferPool is reset
+        lm = LockManager.getInstance();
+        lm.reset();
     }
     
     public static int getPageSize() {
@@ -182,8 +185,6 @@ public class BufferPool {
      *     break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        // some code goes here
-        // not necessary for lab1
         for (Page p : this.pageMap.values())
             this.flushPage(p.getId());
     }
@@ -197,8 +198,6 @@ public class BufferPool {
         are removed from the cache so they can be reused safely
     */
     public synchronized void discardPage(PageId pid) {
-        // some code goes here
-        // not necessary for lab1
         try {
             this.flushPage(pid);
             this.pageMap.remove(pid);
