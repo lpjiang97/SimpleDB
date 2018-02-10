@@ -1,5 +1,6 @@
 package simpledb;
 
+import javax.xml.soap.SAAJMetaFactory;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -7,20 +8,29 @@ import java.util.concurrent.*;
  * LockManager manages the locking/unlocking of simpleDB at page granularity. It is implemented as Singleton and should
  * only be used in BufferPool.
  *
- * @see simpledb.BufferPool
+ * @see BufferPool
  */
 public class LockManager {
 
     private Map<TransactionId, Set<PageId>> pageMap;
     private Map<PageId, Lock> lockMap;
 
+    // SINGLETON
     private static LockManager instance = new LockManager();
 
+    /**
+     * Construct a LockManager
+     */
     private LockManager() {
-        this.pageMap = new ConcurrentHashMap<>();
-        this.lockMap = new ConcurrentHashMap<>();
+        reset();
     }
 
+    /**
+     * Return a LockManager. Any class who needs a LockManager (though really should only be BufferPool) should get an
+     * instance with this method <p>
+     *
+     * @return a LockManager
+     */
     public static LockManager getInstance() {
         return instance;
     }
@@ -31,10 +41,17 @@ public class LockManager {
      * a EXCLUSIVE lock.
      * <p>
      *
-     * @param tid
-     * @param pid
-     * @param perm
-     * @throws TransactionAbortedException if it has been block for over
+     * There are a few conditions to make acquire a non-blocking call:
+     *  - lock not acquired
+     *  - this tid already has the lock (only blocking when tid has SHARED, but now want EXCLUSIVE)
+     *  - another tid tries to acquire a SHARED lock
+     * <p>
+     *
+     * This method will block and sleep the thread which calls acquire until some other thread wakes it up
+     *
+     * @param tid the TransactionId to acquire this lock
+     * @param pid the PageId to acquire the lock
+     * @param perm the permission on this lock (a
      */
     public synchronized void acquire(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException {
@@ -75,7 +92,16 @@ public class LockManager {
         this.pageMap.get(tid).add(pid);
     }
 
+    /**
+     * Release the lock acquired by TransactionId tid and PageId pid.
+     *
+     * @param tid the TransactionId to release the lock
+     * @param pid the PageId to release the lock
+     * @throws IllegalArgumentException if tid or pid does not have a lock to release
+     */
     public synchronized void release(TransactionId tid, PageId pid) {
+        if (holdsLock(tid, pid))
+            throw new IllegalArgumentException("This tid or pid does not have a lock!");
         Lock l = this.lockMap.get(pid);
         l.unlock(tid);
         // remove this page from page set of tid
@@ -83,6 +109,13 @@ public class LockManager {
         this.notifyAll();
     }
 
+    /**
+     * Checks if a TransactionId and PageId holds a lock.
+     *
+     * @param tid the TransactionId to check
+     * @param pid the PageId to check
+     * @return true if the tid and pid has a lock
+     */
     public synchronized boolean holdsLock(TransactionId tid, PageId pid) {
         Lock l = null;
         if (this.pageMap.get(tid) == null || !this.pageMap.get(tid).contains(pid) || (l = this.lockMap.get(pid)) == null)
@@ -90,18 +123,30 @@ public class LockManager {
         return l.hasTid(tid);
     }
 
+    /**
+     * Reset the LockManager to initial state
+     */
     public synchronized void reset() {
         this.pageMap = new ConcurrentHashMap<>();
         this.lockMap = new ConcurrentHashMap<>();
     }
 }
 
+
+/**
+ * Lock represents the SHARED/EXCLUSIVE locks needed by simpleDB. simpleDB should only interacts with Lock through
+ * LockManager. <p>
+ *
+ * @see LockManager
+ */
 class Lock {
 
+    // TYPES of Lock
     static final short SHARED = 0;
     static final short EXCLUSIVE = 1;
 
     private short type;
+    // tids which hold this lock. Should be no more than one for EXCLUSIVE locks.
     private Set<TransactionId> tids;
 
     Lock (short type) {
@@ -113,10 +158,12 @@ class Lock {
 
     void lock(TransactionId tid) {
         this.tids.add(tid);
+        assert (this.getType() == SHARED || this.tids.size() == 1);
     }
 
     void unlock(TransactionId tid) {
         this.tids.remove(tid);
+        assert (this.getType() == SHARED || this.tids.size() == 0);
     }
 
     boolean isLocked() {
