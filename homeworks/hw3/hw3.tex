@@ -1,51 +1,6 @@
-\documentclass[10pt]{article}
-\usepackage{caption}
+\documentclass[10pt]{myland}
 \usepackage{pbox}
-\usepackage{tabularx}
-\usepackage{amsmath, amsfonts, amsthm, amssymb}  % Some math symbols
-\usepackage{enumerate}
-\usepackage{enumitem}
-\usepackage{fullpage}
-\usepackage{hyperref}
-\usepackage{mathtools}
-\usepackage{listings}
-\usepackage{tikz}
-\usepackage{tkz-euclide}
-\usepackage{xcolor}
-\usepackage{multicol}
-\usepackage[margin=0.6in]{geometry}
-\usepackage{lastpage}
-\usepackage{newcent}
-\usepackage{fixltx2e}
-\usepackage{pgfplots}
-\usetikzlibrary{intersections}
-\usepgfplotslibrary{fillbetween}
-\tikzset{>=latex}
 
-%%%%%%%%%%%%%%%%%%%%%SETTING%%%%%%%%%%%%%%%%%%%%%%
-%\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
-%Listing
-\lstset{
-	numbers=left,
-	basicstyle=\ttfamily\footnotesize,
-	breaklines=true
-}
-%Indent
-\def\indented#1{\list{}{}\item[]}
-\let\indented=\endlist
-%%%%%%%%%para indent/skip%%%%%%%%%%%
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{6pt plus 1pt}
-\setlength{\multicolsep}{6.0pt plus 2.0pt minus 1.5pt}% 50% of original values
-%%%%%%%%%Bracket%%%%%%%%%%%%%%%
-\newcommand{\bracket}[1]{\left[#1\right]}
-\newcommand{\parenth}[1]{\left(#1\right)}
-\newcommand{\matrices}[1]{\begin{bmatrix}#1\end{bmatrix}}
-%%%%%%%%%highlight%%%%%%%%%%%%%%%%
-\newcommand{\highlight}[1]{\colorbox{yellow}{$\displaystyle #1$}}
-%%%%%%%%%table%%%%%%%%%%%%%%%%
-\newcolumntype{Y}{>{\centering\arraybackslash}X}
-\def\tabularxcolumn#1{m{#1}}
 %%%%%%%%%%%title%%%%%%%%%%%%%%%%%%%%%%%
 \newcommand{\myname}{Linxing Preston Jiang}
 \newcommand{\quarter}{Winter 2018}
@@ -57,10 +12,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 \begin{center}
-	{\Large \myhwname} \\
-	\vspace{.05in} 
-    \myname\quad\quarter \\
-	\vspace{.05in} 
+	{\Large \myhwname{CSE 444: Homework 3}} \\
+	\vspace{.05in}
+    \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
+	\vspace{.05in}
     \today \\
 \end{center}
 \vspace{.15in} \hrule \vspace{0.5em}%
