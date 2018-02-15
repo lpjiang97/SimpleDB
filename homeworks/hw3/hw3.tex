@@ -1,5 +1,6 @@
 \documentclass[10pt]{article}
 \usepackage{caption}
+\usepackage{pbox}
 \usepackage{tabularx}
 \usepackage{amsmath, amsfonts, amsthm, amssymb}  % Some math symbols
 \usepackage{enumerate}
@@ -69,98 +70,78 @@
 	\begin{enumerate}
 		\item
 		\begin{enumerate}[label=(\alph*)]
-			\item $R_2(X), R_2(Y), \underline{W_2(Y)}, R_1(X), \underline{R_1(Y)}, W_1(X), C_1, ... (\text{the rest of Transaction 2})$
-			\item $\underline{R_1(X)}, R_1(Y), \underline{W_1(X)}, \underline{R_2(X)}, R_2(Y), W_2(Y), C_1, ... (\text{the rest of Transaction 2})$
-            \item $R_1(X), R_1(Y), \underline{W_1(X)}, R_2(X), R_2(Y), W_2(Y), R_2(X), R_2(Y), \underline{W_2(X)}, \underline{C_1}, ... (\text{the rest of Transaction 2}$
+			\item $R_2(X), R_2(Y), \underline{W_2(Y)}, R_1(X), \underline{R_1(Y)}, W_1(X), C_1, ... (\text{the rest of
+				Transaction 2})$
+			\item $\underline{R_1(X)}, R_1(Y), \underline{W_1(X)}, \underline{R_2(X)}, R_2(Y), W_2(Y), C_1, ...
+				(\text{the rest of Transaction 2})$
+            \item $R_1(X), R_1(Y), \underline{W_1(X)}, R_2(X), R_2(Y), W_2(Y), R_2(X), R_2(Y), \underline{W_2(X)},
+				\underline{C_1}, ... (\text{the rest of Transaction 2})$
 		\end{enumerate}
 
 		\item No. $R_0(A)$ is before $R_2(A)$ so Transaction $T_0$ needs to precede $T_2$. $R_2(B)$ is before $W_0(B)$
 			so Transaction $T_2$ needs to precede $T_0$, forming a cycle in the precedence graph.
 
-		\item Hello
+		\item See the following schedule
+            \begin{center}
+                \begin{tabularx}{\linewidth}{Y|Y|Y}
+					Transaction $T_0$ & Transaction $T_1$ & Transaction $T_2$ \\ \hline
+					$L_0(A), L_0(B)$ & & \\
+					$R_0(A)$ & & \\
+					$W_0(A), U_0(A)$ & & \\
+					& $L_1(A)$ -- \color{red}{DENIED}& $L_2(A), R_2(A)$\\
+					& & $W_2(A)$\\
+					& $L_1(A)$ -- \color{red}{DENIED}& \\
+					$R_0(B)$ &  & $L_2(B)$ -- \color{red}{DENIED}\\
+					$W_0(B), U_0(B)$ &  & \\
+					&  & $L_2(B), R_2(B), U_2(B)$\\
+					&  & $W_2(B), U_2(B)$\\
+					& $L_1(A), R_1(A)$ & \\
+					& $L_2(B), R_1(B)$ & \\
+					& $U_1(A), U_1(B)$ & \\
+                \end{tabularx}
+            \end{center}
+
+		\item By only releasing all locks when the transaction is completed, we have both conflict-serializable and
+			recoverable schedules. Also we can avoid cascading aborts.
 	\end{enumerate}
 
-
-% #################################################QUESTION 2
 \newpage
-\section{Implementation: Perceptron}
-Hyperparamter Tuning: \par
-Cross validation was used for tuning hyperparameter $E$ (\texttt{perception.py cv\_tuning}). The csv result are in folder cv\_results with format E, training error rate, validation error rate, test error rate.
-$E$ was chosen as the one which gives the smallest validation error rate.  \par
-Possible noise features: \par
-If the weight for a feature ended up really small compared to other weight, it is possible that it contains some noise. Also, noise features tend to thrash on values. 
-Overfitting Detection: \par
-To detect overfitting, I included the plot for dataset 2 to 9 below to show the relation between training err, validation err (development data) and the hyperparameter (See the csv data in folder \texttt{cvplots})
-$E$. \par
+\section{Optimistic Concurrency Control}
+    \begin{enumerate}
+		\item See below
+            \begin{center}
+                \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y|Y}
+                    $T_1$ & $T_2$ & $T_3$ & $T_4$ & $X$ & $Y$ \\ \hline
+                    1 & 2 & 3 & 4 & \pbox{20cm}{RT = 0 \\ WT = 0 \\ C = true} & \pbox{20cm}{RT = 0 \\ WT = 0 \\ C = true}\\ \hline
+					  & $R_2(X)$ & & & RT = 2 & \\ \hline
+					$R_1(X)$ & & & & RT = 2 & \\ \hline
+					  & $W_2(X)$ & & & \pbox{20cm}{WT = 2 \\ C = false} & \\ \hline
+					  & & & $W_4(X)$ & \pbox{20cm}{WT = 4} & \\ \hline
+					\pbox{20cm}{$W_1(X)$ \\ \color{red}{ABORT}} & & & & & \\ \hline
+					& & \pbox{20cm}{$W_3(X)$ \\ \color{red}{DELAY}} &  &  & \\ \hline
+					& & & \color{red}{ABORT} &  & \\ \hline
+					& $R_2(Y)$ & $W_3(X)$ &  & WT = 3 & RT = 2\\ \hline
+					& $W_2(Y)$ &  &  & & \pbox{20cm}{WT = 2 \\ C = false}  \\ \hline
+					& & \pbox{20cm}{$R_3(X)$ \\ \color{red}{DELAY}}  &  & & \\ \hline
+					& $C_2$ & $R_3(X)$ & & \pbox{20cm}{RT =2 \\ WT = 3 \\ C = true} & RT = 3\\ \hline
+					& & $W_3(X)$ & & & WT = 3\\ \hline
+					& & $C_3$ & & & \pbox{20cm}{RT =3 \\ WT = 3 \\ C = true} \\ \hline
+                \end{tabularx}
+            \end{center}
 
-\newpage
-\begin{center}
-	\begin{tabularx}{\linewidth}{|Y|Y|Y|Y|Y|}
-		\hline
-			     & \multicolumn{4}{c|}{Questions} \\ \hline
-		Dataset  & 2 & 3 & 4 & 5 \\ \hline
-		2 		 & Yes. $\gamma \geq 0.025$. See \texttt{perception.py get\_margin}
-				 & Based on the graph above, for hyperparameter $E > 2000$, the model starts to overfit.
-				 & No. Both training error shows the trend of decreasing, and the final weight vector is reasonable
-				 & Pick $E = 2000$. Training accuracy = 0.998. Validation accuracy = 0.991. Test accuracy = 0.990  \\ \hline
-		3 		 & Yes. $\gamma \geq 0.008$. 
-				 & From the graph above, there is no clear minimum error rate for development data. No obvious overfit detected.
-				 & Feature 19 has very small norm compared to other features and shows big thrash on value. Suspect 19 contains noise.
-				 & Pick $E = 3750$. Training accuracy = 0.996. Validation accuracy = 0.983. Test accuracy = 0.990  \\ \hline
-		4 		 & Dataset 4 is not linearly separable. $\gamma = -\infty$. 
-				 & From the graph above, there is no clear minimum error rate for development data. No obvious overfit detected.
-				 & The dataset is not linearly separable so it's hard to say about noise features.
-				 & Pick $E = 4000$. Training accuracy = 0.967. Validation accuracy = 0.961. Test accuracy = 0.961  \\ \hline
-		5 		 & Dataset 5 is not linearly separable. $\gamma = -\infty$. 
-				 & From the graph above, there is no clear minimum error rate for development data. No obvious overfit detected.
-				 & The dataset is not linearly separable so it's hard to say about noise features.
-				 & Pick $E = 1500$. Training accuracy = 0.956. Validation accuracy = 0.951. Test accuracy = 0.941  \\ \hline
-		6 		 & Yes. $\gamma = 0.007$. 
-				 & From the graph above, for hyperparameter $E > 3500$, the model starts to overfit
-				 & Feature 10 and 19 have very small norm compared to others, have feature 19 thrashed a lot on the value. Suspect 10 and 19 contain noise.
-				 & Pick $E = 3500$. Training accuracy = 0.997. Validation accuracy = 0.990. Test accuracy = 0.990  \\ \hline
-		7 		 & Yes. $\gamma = 0.004$. 
-				 & From the graph above, for hyperparameter $E > 2750$, the model starts to overfit
-				 & Feature 10 and 19 still look noisy, feature 18 also has very small norm and a reported big thrash.
-				 & Pick $E = 2750$. Training accuracy = 0.995. Validation accuracy = 0.986. Test accuracy = 0.990  \\ \hline
-		8 		 & Yes. $\gamma = 0.003$. 
-				 & The development data error rate wiggles a lot, it's hard to tell if there is overfit. 
-				 & Same as dataset 7
-				 & Pick $E = 3250$. Training accuracy = 0.999. Validation accuracy = 0.993. Test accuracy = 0.985  \\ \hline
-		9 		 & Dataset 9 is not linear separable. $\gamma = -\infty$. 
-				 & The development data error rate wiggles a lot, it's hard to tell if there is overfit. Also the data is very noisy
-				 & From the graph above, I suspect the whole dataset is random noise because no trend of decreasing is shown, even with the trainging data
-				 & Pick $E = 4000$. Training accuracy = 0.856. Validation accuracy = 0.855. Test accuracy = 0.852\\ \hline
-	\end{tabularx}
-\end{center}
-\par \large\textbf{Surprise!} \par
-From the graphs above, it seems like the performance on the test set gets better when the size of the training set is larger. So the way to get better performance
-on 6, 7, and 8 is to combine the training set of 6, 7, 8 (they are from the same source) and call it \texttt{A2.10.train.tsv} \par
-Graph for Cross Validation: \par
-
-\par
-\begin{center}
-	\begin{tabularx}{\linewidth}{|Y|Y|Y|Y|Y|}
-		\hline
-			     & \multicolumn{4}{c|}{Questions} \\ \hline
-		Dataset  & 2 & 3 & 4 & 5 \\ \hline
-		10 		 & Yes. $\gamma \geq 0.000566$
-				 & No overfitting sign is shown. Because $E = 4000$ does not separate the data, this model upto $E=4000$ is underfitting.
-				 & No. Both training error shows the trend of decreasing, and the final weight vector is reasonable
-				 & My cross validation only tested until $E=4000$, however, I have to raise $E$ upto $10000$ to linearly separate the data. 
-				   Training accuracy = 0.9989. Validation accuracy = 0.9889. Test accuracy = 0.912\\ \hline 
-	\end{tabularx}
-\end{center}
-
-\section{Beat the Perceptron}
-\par Dataset 9 was chosen for this part because the data looks suspiciously noisy, so it would be helpful to use another algorithm to see if the error rate can
-be greatly improved, which suggested some specific properties of data (not linearly separable, and different classes of data heavily interwined). If the error
-rate does not show a big improvement, then we are more confident that the data is noisy.
-\par I chose to use K-nearest neighbors, mostly because the voted perceptron would take forever for me to tune $E$. The following is the graph of hyperparameter
-$K$ tuning using cross validation (800 train, 200 test).
-
-\par As the graph suggest, the performance of $K$-nearest is not a big improvement from perceptron. Pick $K=94$ with the smallest development data error rate $0.185$
-(See \texttt{K-nearest/cv\_result.csv}). \par
-Due to the randomness when initializing the model in $K$-nearest, the algorithm was run 10 times and took the average of the error rate. Using $K=94$, we get the 
-error rate on the test data $0.184$, which still does not beat perceptron at all times (in some case the perceptron reached below 0.1 error rate). 
+		\item See below
+            \begin{center}
+                \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y|Y|Y}
+                    $T_1$ & $T_2$ & $T_3$ & $T_4$ & $X_0$ & $X_3$ & $X_4$ \\ \hline
+                    1 & 2 & 3 & 4 & & &  \\ \hline
+					$R_1(X)$ & & & & RT = 1 & &  \\ \hline
+					& & $R_3(X)$  & & RT = 3 & &  \\ \hline
+					& & $W_3(X)$  & & & CREATE &  \\ \hline
+					& $R_2(X)$ & & & RT = 3& &  \\ \hline
+					& & & $R_4(X)$ & & RT = 4 &  \\ \hline
+					& \pbox{30cm}{$W_2(X)$ \\ \color{red}{ABORT}} & & & & &  \\ \hline
+					& & & $W_4(X)$ & &  & CREATE  \\ \hline
+                \end{tabularx}
+            \end{center}
+	\end{enumerate}
 \end{document}
