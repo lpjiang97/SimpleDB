@@ -124,9 +124,9 @@ public class Tuple implements Serializable {
         return rtn;
     }
 
-    // not sure if this will be used
-    @Override
-    public int hashCode() {
-        return this.td.hashCode() + 31 * this.rid.hashCode() + 37 * Arrays.hashCode(this.fields);
-    }
+    // // not sure if this will be used
+    // @Override
+    // public int hashCode() {
+    //     return 31 * this.rid.hashCode() + 37 * Arrays.hashCode(this.fields);
+    // }
 }

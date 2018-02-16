@@ -35,23 +35,6 @@ public class LockManager {
         return instance;
     }
 
-
-    public synchronized void acquire (TransactionId tid, PageId pid, Permissions perm, long timeLimit) {
-        ExecutorService executor = Executors.newFixedThreadPool(1);
-        Future<?> future = executor.submit(() -> acquire(tid, pid, perm));
-        executor.shutdown();
-
-        try {
-            future.get(timeLimit, TimeUnit.MILLISECONDS);  //     <-- wait 8 seconds to finish
-        } catch (InterruptedException e) {    //     <-- possible error cases
-            System.out.println("job was interrupted");
-        } catch (ExecutionException e) {
-            System.out.println("caught exception: " + e.getCause());
-        } catch (TimeoutException e) {
-            future.cancel(true);              //     <-- interrupt the job
-        }
-    }
-
     /**
      * One transacatiion tries to acquire a lock on a page defined by pid. The type of the lock is determined by
      * Permission. If READ_ONLY, it will try to acquire a SHARED lock, otherwise (READ_WRITE), it will try to acquire
@@ -70,13 +53,14 @@ public class LockManager {
      * @param pid the PageId to acquire the lock
      * @param perm the permission on this lock (a
      */
-    public synchronized void acquire(TransactionId tid, PageId pid, Permissions perm) {
+    public synchronized void acquire(TransactionId tid, PageId pid, Permissions perm) throws TransactionAbortedException{
         // check if this transaction has a set of page ids yet
         this.pageMap.putIfAbsent(tid, new HashSet<>());
         // check if there is a lock for this page id yet
         this.lockMap.putIfAbsent(pid, new Lock((short)perm.permLevel));
         // get lock
         Lock l = this.lockMap.get(pid);
+        boolean hasSlept = false;
         while (l.isLocked()) {
             // if this lock is obtained by tid already
             if(l.hasTid(tid)) {
@@ -96,12 +80,16 @@ public class LockManager {
                     return;
                 }
             }
-            // block here
+            if (hasSlept) {
+                throw new TransactionAbortedException();
+            }
+            // Sleep for a while
             try {
-                this.wait();
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            hasSlept = true;
         }
         // get the lock
         l.lock(tid);
@@ -122,7 +110,6 @@ public class LockManager {
         l.unlock(tid);
         // remove this page from page set of tid
         this.pageMap.get(tid).remove(pid);
-        this.notifyAll();
     }
 
     /**
@@ -132,9 +119,12 @@ public class LockManager {
      * @throws IllegalArgumentException if tid or pid does not have a lock to release
      */
     public synchronized void releaseAll(TransactionId tid) {
-        Set<PageId> pids = new HashSet<>(this.pageMap.get(tid));
-        for (PageId pid : pids)
-            this.release(tid, pid);
+        Set<PageId> pids = this.pageMap.get(tid);
+        if (pids != null) {
+            pids = new HashSet<>(this.pageMap.get(tid));
+            for (PageId pid : pids)
+                this.release(tid, pid);
+        }
     }
 
     /**
