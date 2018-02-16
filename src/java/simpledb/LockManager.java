@@ -88,7 +88,7 @@ public class LockManager {
             }
             // Sleep for a while
             try {
-                Thread.sleep(500);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
