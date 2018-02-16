@@ -84,6 +84,7 @@ public class LockManager {
                 }
             }
             if (hasSlept) {
+                this.releaseAll(tid);
                 throw new TransactionAbortedException();
             }
             // Sleep for a while
@@ -95,6 +96,8 @@ public class LockManager {
             hasSlept = true;
         }
         // get the lock
+        if (perm.permLevel != l.getType())
+            l.setType((short)perm.permLevel);
         l.lock(tid);
         this.pageMap.get(tid).add(pid);
     }
@@ -192,6 +195,11 @@ class Lock {
 
     short getType() {
         return this.type;
+    }
+
+    void setType(short newtype) {
+        assert (newtype == 0 || newtype == 1);
+        this.type = newtype;
     }
 
     void upgrade() {
