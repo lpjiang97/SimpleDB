@@ -47,11 +47,14 @@ public class LockManager {
      *  - another tid tries to acquire a SHARED lock
      * <p>
      *
-     * This method will block and sleep the thread which calls acquire until some other thread wakes it up
+     * This method will block and sleep for 500 milliseconds on the thread which calls acquire if it cannot grab the
+     * lock, after waking up, it will try to grab the lock again. If it still cannot grab the lock, it will throw a
+     * TransactionAbortedException
      *
      * @param tid the TransactionId to acquire this lock
      * @param pid the PageId to acquire the lock
-     * @param perm the permission on this lock (a
+     * @param perm the permission on this lock
+     * @throws TransactionAbortedException if the second try of grabbing the lock still fails
      */
     public synchronized void acquire(TransactionId tid, PageId pid, Permissions perm) throws TransactionAbortedException{
         // check if this transaction has a set of page ids yet
@@ -113,10 +116,9 @@ public class LockManager {
     }
 
     /**
-     * Release the lock acquired by TransactionId tid and PageId pid.
+     * Release all the lock acquired by TransactionId tid
      *
      * @param tid the TransactionId to release the lock
-     * @throws IllegalArgumentException if tid or pid does not have a lock to release
      */
     public synchronized void releaseAll(TransactionId tid) {
         Set<PageId> pids = this.pageMap.get(tid);
