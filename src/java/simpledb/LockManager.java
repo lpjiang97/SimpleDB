@@ -126,6 +126,18 @@ public class LockManager {
     }
 
     /**
+     * Release the lock acquired by TransactionId tid and PageId pid.
+     *
+     * @param tid the TransactionId to release the lock
+     * @throws IllegalArgumentException if tid or pid does not have a lock to release
+     */
+    public synchronized void releaseAll(TransactionId tid) {
+        Set<PageId> pids = new HashSet<>(this.pageMap.get(tid));
+        for (PageId pid : pids)
+            this.release(tid, pid);
+    }
+
+    /**
      * Checks if a TransactionId and PageId holds a lock.
      *
      * @param tid the TransactionId to check

@@ -104,8 +104,6 @@ public class BufferPool {
      * @param pid the ID of the page to unlock
      */
     public  void releasePage(TransactionId tid, PageId pid) {
-        // some code goes here
-        // not necessary for lab1|lab2
         lm.release(tid, pid);
     }
 
@@ -115,14 +113,11 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      */
     public void transactionComplete(TransactionId tid) throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
+        transactionComplete(tid, true);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
     public boolean holdsLock(TransactionId tid, PageId p) {
-        // some code goes here
-        // not necessary for lab1|lab2
         return lm.holdsLock(tid, p);
     }
 
@@ -135,8 +130,13 @@ public class BufferPool {
      */
     public void transactionComplete(TransactionId tid, boolean commit)
         throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
+        // commit
+        if (commit) {
+            flushPages(tid);
+        } else { // abort
+            revertPages(tid);
+        }
+        lm.releaseAll(tid);
     }
 
     /**
@@ -227,8 +227,27 @@ public class BufferPool {
     /** Write all pages of the specified transaction to disk.
      */
     public synchronized  void flushPages(TransactionId tid) throws IOException {
-        // some code goes here
-        // not necessary for lab1|lab2
+        for (Page p : this.pageMap.values()) {
+            TransactionId t = null;
+            if ((t = p.isDirty()) != null && t.equals(tid)) {
+                // flush page
+                flushPage(p.getId());
+            }
+        }
+    }
+
+    /**
+     * Revert all pages of the specified transaction to the original state
+     */
+    public synchronized void revertPages(TransactionId tid) {
+        for (Page p : this.pageMap.values()) {
+            TransactionId t = null;
+            if ((t = p.isDirty()) != null && t.equals(tid)) {
+                PageId pid = p.getId();
+                Page old = p.getBeforeImage();
+                this.pageMap.put(pid, old);
+            }
+        }
     }
 
     /**
@@ -237,9 +256,13 @@ public class BufferPool {
      */
     private synchronized  void evictPage() throws DbException {
         // pick the first page
-        PageId pid = new ArrayList<>(this.pageMap.keySet()).get(0);
-        // discard it
-        this.discardPage(pid);
+        for (PageId pid : this.pageMap.keySet()) {
+            if (this.pageMap.get(pid).isDirty() == null) {
+                this.discardPage(pid);
+                return;
+            }
+        }
+        throw new DbException("All pages are dirty in BufferPool");
     }
 
     private void updateBufferPool(ArrayList<Page> pagelist, TransactionId tid) throws DbException {
