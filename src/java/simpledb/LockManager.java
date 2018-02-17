@@ -89,15 +89,14 @@ public class LockManager {
             }
             // Sleep for a while
             try {
-                Thread.sleep(100);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             hasSlept = true;
         }
         // get the lock
-        if (perm.permLevel != l.getType())
-            l.setType((short)perm.permLevel);
+        l.setType((short)perm.permLevel);
         l.lock(tid);
         this.pageMap.get(tid).add(pid);
     }
