@@ -48,9 +48,10 @@
         transactions that are not committing. An extra test on this behavior would be helpful for debugging.
 
     \item Design decisions:
-        \begin{enumerate}
+        \begin{enumerate}[itemsep=1.5em]
             \item Lock
                 \begin{itemize}
+                    \setlength\itemsep{1em}
                     \item Lock has two types: \texttt{SHARED} or \texttt{EXCLUSIVE}.
                     \item Lock keeps a hash set of \texttt{TransactionIds}, mainly for shared locks to keep track of
                         it is shared by which transactions.
@@ -58,6 +59,7 @@
                 \end{itemize}
             \item LockManager
                 \begin{itemize}
+                    \setlength\itemsep{1em}
                     \item LockManager is implemented as Singleton, for there should be only one object of
                         \texttt{LockManager} to manage all transactions, just like \texttt{BufferPool}.
                     \item Lock keeps a hash map from \texttt{TransactionId} to a hash set of \texttt{PageIds} to keep
@@ -74,72 +76,24 @@
                         then it will try to acquire for the lock again. If the second try still fails, it will be
                         considered as a deadlock condition, and so \texttt{acquire} throws a \texttt{TransactionAbortedException}.
                 \end{itemize}
-            \item BufferPool
+            \item BufferPool, race conditions
                 \begin{itemize}
-                    \item
+                    \setlength\itemsep{1em}
+                    \item To avoid race conditions, \texttt{getPage} is synchronized.
+                    \item When inserting tuples and \texttt{HeapFile} needs to add a new page, it is possible that two
+                        transactions both find that a new page needed to be added after finishing scanning for empty
+                        slots. The current code will possibly make transactions add a new page each. The fix is to makej
+                        \texttt{HeapFile.insertTuple} synchronized so that only one transaction will perform
+                        scanning for empty slots. This is more efficient than making \texttt{BufferPool.insertTuple}
+                        synchronized because transactions which are modifying different \texttt{HeapFile} should not
+                        have this issue thus should be able to perform concurrently.
                 \end{itemize}
         \end{enumerate}
 
-    \newpage
-    \par Examples:
-    \par Workflow (\texttt{join()}, showing \texttt{next()} call): \\
-    \begin{center}
-        \begin{tikzpicture}[
-            scale=.6,
-        ]
-            \path[->, thick] (0, 3) edge node[midway, above] {...(father opertor \texttt{next})} (0, 0);
-            \draw[draw=black] (-1.5, 0) rectangle (1.5, -1) node[midway]  {\texttt{Join}};
-            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{child1.next()}} (-5, -2.5);
-            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{child2.next()}} (5, -2.5);
-            \draw[draw=black] (-8.5, -2.5) rectangle (-1.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
-            \draw[draw=black] (1.5, -2.5) rectangle (8.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
-            \path[->, thick] (-5, -3.5) edge node[midway, above] {} (0, -4.5);
-            \path[->, thick] (5, -3.5) edge node[midway, above] {} (0, -4.5);
-            \draw[draw=black] (-2.5, -4.5) rectangle (2.5, -5.5) node[midway]  {\texttt{JoinPredicte}};
-            \path[->, thick] (0, -5.5) edge node[midway] {\texttt{JoinPredicate.filter}} (0, -7.5);
-            \draw[draw=black] (-2.5, -7.5) rectangle (2.5, -8.5) node[midway]  {\texttt{Return Tuple}};
-            \node (father) at (10, 3) {};
-            \path[->, thick, color=red] (0, -8.5) edge [bend right=120] node[midway] {return to father \texttt{next} call} (father);
-        \end{tikzpicture}
-    \end{center}
-    Workflow (\texttt{insertTuple()}): \\
-    \begin{center}
-        \begin{tikzpicture}[
-            scale=.6,
-        ]
-            \path[->, thick] (0, 2) edge node[midway, above] {\texttt{insert}} (0, 0);
-            \draw[draw=black] (-1.5, 0) rectangle (1.5, -1) node[midway]  {\texttt{BufferPool}};
-            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{insert}} (0, -3);
-            \draw[draw=black] (-1.5, -3) rectangle (1.5, -4) node[midway]  {\texttt{HeapFile}};
-            \path[->, thick] (0, -4) edge node[midway, above] {\texttt{insert}} (0, -6);
-            \draw[draw=black] (-3, -6) rectangle (3, -7) node[midway]  {\texttt{Page in BufferPool?}};
-            \path[->, thick] (0, -7) edge node[midway, above] {\texttt{yes}} (-3, -9);
-            \path[->, thick] (0, -7) edge node[midway, above] {\texttt{no}} (6, -9);
-            \draw[draw=black] (-5, -9) rectangle (-1, -10) node[midway]  {\texttt{Return Page}};
-            \draw[draw=black] (-0.5, -9) rectangle (15, -10) node[midway]  {\texttt{pull a new page (evict if needed)}};
-            \path[->, thick] (-3.5, -10) edge node[midway, above] {\texttt{insertTuple}} (0, -12);
-            \path[->, thick] (7, -10) edge node[midway, above] {\texttt{insertTuple}} (0, -12);
-            \draw[draw=black] (-3, -12) rectangle (3, -13) node[midway]  {updated \texttt{HeapPage}};
-            \path[->, thick, color=red] (-3, -12.5) edge [bend left=80] node[midway, rotate=80] {reinsert to \texttt{BufferPool
-                to update record}} (-1.5, -0.5);
-        \end{tikzpicture}
-    \end{center}
-    \newpage
-
-    \item Design decisions: I chose to use nested loop join. Nested-loop-join is the slowest but it works for all kinds
-        of comparisons (Hash join only works well for equality comparison, sort-merge join only works well for inequaliy
-        comparison). For eviction policy, I chose to evict the first page every time the \texttt{BufferPool} is full.
-        This does not work well in terms of keeping most commonly used page in memory, which result in extra disk IOs,
-        but the implementation is easy and does not require extra data structures in order to keep track of page usage.
-
-    \item Extra Unit tests: A unit test for the correctness of HeapFile insertTuple behavior would be great. The spec
-        requires the update of \texttt{BufferPool} pages to happen in the insert/delete methods of \texttt{BufferPool}
-        instead of in \texttt{HeapFile}. I did it the wrong way and caused the \texttt{handleManyDirty} test to fail, and
-        it took me a while to realize that test uses a overriden \texttt{insert} method and \texttt{BufferPool} should
-        be in charge of updating the record.
 
     \item Changes to API: I did not make changes to the APIs given.
 
-    \item Missing elements: I believe I finished the entire Lab 2
+    \item Missing elements: I believe I finished the entire Lab 3.
+
 \end{enumerate}
 \end{document}
