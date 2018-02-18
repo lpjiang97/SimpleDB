@@ -12,5 +12,5 @@ build:
     - ant compile dist
 test:
   script:
-    - for i in {1..100} \n do \n ant test \n ant systemtest \n done \n
+    - for i in {1..100}; do ant test && ant systemtest; done;
 
