@@ -42,9 +42,10 @@ public class LockManager {
      * <p>
      *
      * There are a few conditions to make acquire a non-blocking call:
-     *  - lock not acquired
-     *  - this tid already has the lock (only blocking when tid has SHARED, but now want EXCLUSIVE)
-     *  - another tid tries to acquire a SHARED lock
+     *   - When the lock on that page is not locked
+     *   - When the lock is locked by this transaction itself (will upgrade a share lock to exclusive if this
+     *      transaction is the only one which holds the lock)
+     *   - When the lock is locked, but it is a shared lock, and the transaction wants a shared lock.
      * <p>
      *
      * This method will block and sleep for 500 milliseconds on the thread which calls acquire if it cannot grab the
