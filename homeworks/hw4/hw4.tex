@@ -1,0 +1,53 @@
+\documentclass[10pt]{myland}
+\usepackage{pbox}
+
+%%%%%%%%%%%title%%%%%%%%%%%%%%%%%%%%%%%
+\renewcommand{\myname}{Linxing Preston Jiang}
+\renewcommand{\quarter}{Winter 2018}
+\renewcommand{\myhwname}{\textbf{CSE 444: Homework 4}}
+%%%%%%%%%%%%%gauss%%%%%%%%%%%%%%%%%
+\pgfmathdeclarefunction{gauss}{2}{%
+  \pgfmathparse{1/(#2*sqrt(2*pi))*exp(-((x-#1)^2)/(2*#2^2))}%
+}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\begin{center}
+	{\Large \myhwname} \\
+	\vspace{.05in}
+    \myname\quad\quarter\\
+	\vspace{.05in}
+    \today \\
+\end{center}
+\vspace{.15in} \hrule \vspace{0.5em}%
+
+\section{Undo Log}
+\begin{enumerate}
+    \item
+    \begin{enumerate}
+        \item
+         T1\\
+         T2, T3\\
+         T4, T5\\
+        \item
+            T4: $X_4 \to 8$ \\
+            T5: $X_5 \to 7$ \\
+            T4: $X_4 \to 6$ \\
+        \item <START T4> to the end
+    \end{enumerate}
+\end{enumerate}
+
+\section{Redo Log}
+\begin{enumerate}
+    \item
+    \begin{enumerate}
+        \item
+         T1\\
+         T5\\
+        \item The whole log files needs to be read.
+        \item Redo T1 and T4 \\
+            T1: $A \to 15$ \\
+            T1: $D \to 5$ \\
+            T4: $E \to 10$ \\
+    \end{enumerate}
+\end{enumerate}
+\end{document}
