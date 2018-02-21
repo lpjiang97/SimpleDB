@@ -135,6 +135,7 @@ public class BufferPool {
             flushPages(tid);
         } else { // abort
             revertPages(tid);
+            Database.getLogFile().logAbort(tid);
         }
         lm.releaseAll(tid);
     }
@@ -217,6 +218,9 @@ public class BufferPool {
         TransactionId tid = null;
         // flush it if it is dirty
         if ((tid = p.isDirty()) != null) {
+            // add log record
+            Database.getLogFile().logWrite(tid, p.getBeforeImage(), p);
+            Database.getLogFile().force();
             // write to disk
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(p);
             // unmark dirty status
@@ -230,8 +234,10 @@ public class BufferPool {
         for (Page p : this.pageMap.values()) {
             TransactionId t = null;
             if ((t = p.isDirty()) != null && t.equals(tid)) {
-                // flush page
-                flushPage(p.getId());
+                // NO FORCE, only write the log file without flushing the page
+                Database.getLogFile().logWrite(tid, p.getBeforeImage(), p);
+                Database.getLogFile().force();
+                p.setBeforeImage();
             }
         }
     }
@@ -255,14 +261,11 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized  void evictPage() throws DbException {
+        // STEAL
         // pick the first page
-        for (PageId pid : this.pageMap.keySet()) {
-            if (this.pageMap.get(pid).isDirty() == null) {
-                this.discardPage(pid);
-                return;
-            }
-        }
-        throw new DbException("All pages are dirty in BufferPool");
+        PageId pid = new ArrayList<>(this.pageMap.keySet()).get(0);
+        // discard it
+        this.discardPage(pid);
     }
 
     private void updateBufferPool(ArrayList<Page> pagelist, TransactionId tid) throws DbException {
