@@ -135,7 +135,6 @@ public class BufferPool {
             flushPages(tid);
         } else { // abort
             revertPages(tid);
-            Database.getLogFile().logAbort(tid);
         }
         lm.releaseAll(tid);
     }
