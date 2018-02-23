@@ -58,17 +58,27 @@
         \begin{center}
             \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y|Y|Y}
                 LSN & TransactionID & prevLSN & type & pageID & log entry & undoNextLSN \\ \hline
+                \rowcolor{Gray}
                 1 & T1 & - & Update & P1 & \pbox{20cm}{Write A \\ (A $\to$ A1)} & - \\\hline
+                \rowcolor{Gray}
                 2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B1)} & - \\\hline
+                \rowcolor{Gray}
                 3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C1)} & - \\\hline
+                \rowcolor{Gray}
                 4 & T2 & 3 & Abort & - & - & - \\\hline
+                \rowcolor{Gray}
                 5 & T2 & - & CLR & - & \pbox{20cm}{Undo T2 \\ LSN 3} & 2 \\\hline
+                \rowcolor{Gray}
                 6 & T2 & - & CLR & - & \pbox{20cm}{Undo T2 \\ LSN 2} & - \\\hline
+                \rowcolor{Gray}
                 7 & T2 & 6 & END & - & - & - \\\hline
+                \rowcolor{Gray}
                 8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D1)}  & - \\\hline
+                \rowcolor{Gray}
                 9 & T1 & 1 & Commit & - & - & - \\\hline
                 10 & T1 & 9 & END & - & - & - \\
             \end{tabularx}
+            \crule[Gray]{0.8cm}{0.5cm} : log flushed to disk
         \end{center}
         \newpage
         Transaction Table:
@@ -86,7 +96,7 @@
             \end{tabularx}
         \end{center}
         P1 is not in memory (flushed back to disk), with value A1 and B, pageLSN is 1. \\
-        P2 is in memory, with value C and D1, pageLSN is 8. \\
+        P2 is in memory, with value C and D1, pageLSN is 8 (though not flushed back to disk). \\
     \item Transaction Table:
         \begin{center}
             \begin{tabularx}{.8\linewidth}{Y|Y|Y}
@@ -106,8 +116,42 @@
     \item Redo Phase: We start as the firstLSN, which is 1
         \begin{itemize}
             \item 1: Skipped (pageLSN = LSN)
-            \item 2:
+            \item 2: Redone
+            \item 3 - 7: Skipped (recLSN > LSN)
+            \item 8: Redone
+            \item 9: Skipped (commit)
         \end{itemize}
+
+    \item Undo Phase:
+        \begin{center}
+            \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y|Y|Y}
+                LSN & TransactionID & prevLSN & type & pageID & log entry & undoNextLSN \\ \hline
+                \rowcolor{Gray}
+                1 & T1 & - & Update & P1 & \pbox{20cm}{Write A \\ (A $\to$ A1)} & - \\\hline
+                \rowcolor{Gray}
+                2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B1)} & - \\\hline
+                \rowcolor{Gray}
+                3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C1)} & - \\\hline
+                \rowcolor{Gray}
+                4 & T2 & 3 & Abort & - & - & - \\\hline
+                \rowcolor{Gray}
+                5 & T2 & - & CLR & - & \pbox{20cm}{Undo T2 \\ LSN 3} & 2 \\\hline
+                \rowcolor{Gray}
+                6 & T2 & - & CLR & - & \pbox{20cm}{Undo T2 \\ LSN 2} & - \\\hline
+                \rowcolor{Gray}
+                7 & T2 & 6 & END & - & - & - \\\hline
+                \rowcolor{Gray}
+                8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D1)}  & - \\\hline
+                \rowcolor{Gray}
+                9 & T1 & 1 & Commit & - & - & - \\\hline
+                \rowcolor{Gray}
+                10 & T1 & 9 & END & - & - & - \\\hline
+                \rowcolor{Gray}
+                11 & T3 & 8 & CLR & - & \pbox{20cm}{Undo T3 \\ LSN 8} & - \\
+            \end{tabularx}
+        \end{center}
+        P1 is not in memory (flushed back to disk, no need for redo/undo) \\
+        P2 is in memory with original value C and D, pageLSN is 11
 \end{enumerate}
 
 \end{document}
