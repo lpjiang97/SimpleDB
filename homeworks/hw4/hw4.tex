@@ -27,11 +27,11 @@
         \item
          T1\\
          T2, T3\\
-         T4, T5\\
+         T4, T5
         \item
             T4: $X_4 \to 8$ \\
             T5: $X_5 \to 7$ \\
-            T4: $X_4 \to 6$ \\
+            T4: $X_4 \to 6$
         \item <START T4> to the end
     \end{enumerate}
 \end{enumerate}
@@ -42,7 +42,7 @@
     \begin{enumerate}
         \item
          T1\\
-         T5\\
+         T5
         \item The whole log files needs to be read.
         \item Redo T1 and T4 \\
             T1: $A \to 15$ \\
@@ -50,4 +50,44 @@
             T4: $E \to 10$ \\
     \end{enumerate}
 \end{enumerate}
+
+\section{Aries}
+\begin{enumerate}
+    \item
+        Write-ahead log:
+        \begin{center}
+            \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y|Y|Y}
+                LSN & TransactionID & prevLSN & type & pageID & log entry & undoNextLSN \\ \hline
+                1 & T1 & - & Update & P1 & \pbox{20cm}{Write A \\ (A $\to$ A1)} & - \\\hline
+                2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B1)} & - \\\hline
+                3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C1)} & - \\\hline
+                4 & T2 & 3 & Abort & - & - & - \\\hline
+                5 & T2 & - & CLR & - & \pbox{20cm}{Undo T2 \\ LSN 3} & 2 \\\hline
+                6 & T2 & - & CLR & - & \pbox{20cm}{Undo T2 \\ LSN 2} & - \\\hline
+                7 & T2 & 6 & END & - & - & - \\\hline
+                8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D1)}  & - \\\hline
+                9 & T1 & 1 & Commit & - & - & - \\\hline
+                10 & T1 & 9 & END & - & - & - \\
+            \end{tabularx}
+        \end{center}
+        Transaction Table:
+        \begin{center}
+            \begin{tabularx}{.8\linewidth}{Y|Y|Y}
+                TransactionID & lastLSN & Status \\\hline
+                T3 & 8 & Running \\
+            \end{tabularx}
+        \end{center}
+        Dirty Page Table:
+        \begin{center}
+            \begin{tabularx}{.8\linewidth}{Y|Y}
+                pageID & recLSN \\\hline
+                P3 & 8 \\
+            \end{tabularx}
+        \end{center}
+        P1 is not in memory (flushed back to disk), with value A1 and B, pageLSN is 1. \\
+        P2 is in memory, with value C and D1, pageLSN is 8. \\
+
+
+\end{enumerate}
+
 \end{document}
