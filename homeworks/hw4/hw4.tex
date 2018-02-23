@@ -70,6 +70,7 @@
                 10 & T1 & 9 & END & - & - & - \\
             \end{tabularx}
         \end{center}
+        \newpage
         Transaction Table:
         \begin{center}
             \begin{tabularx}{.8\linewidth}{Y|Y|Y}
@@ -81,13 +82,32 @@
         \begin{center}
             \begin{tabularx}{.8\linewidth}{Y|Y}
                 pageID & recLSN \\\hline
-                P3 & 8 \\
+                P2 & 8 \\
             \end{tabularx}
         \end{center}
         P1 is not in memory (flushed back to disk), with value A1 and B, pageLSN is 1. \\
         P2 is in memory, with value C and D1, pageLSN is 8. \\
-
-
+    \item Transaction Table:
+        \begin{center}
+            \begin{tabularx}{.8\linewidth}{Y|Y|Y}
+                TransactionID & lastLSN & Status \\\hline
+                T1 & 9 & Committed\\ \hline
+                T3 & 8 & Running \\
+            \end{tabularx}
+        \end{center}
+        Dirty Page Table:
+        \begin{center}
+            \begin{tabularx}{.8\linewidth}{Y|Y}
+                pageID & recLSN \\\hline
+                P1 & 1 \\\hline
+                P2 & 8 \\
+            \end{tabularx}
+        \end{center}
+    \item Redo Phase: We start as the firstLSN, which is 1
+        \begin{itemize}
+            \item 1: Skipped (pageLSN = LSN)
+            \item 2:
+        \end{itemize}
 \end{enumerate}
 
 \end{document}
