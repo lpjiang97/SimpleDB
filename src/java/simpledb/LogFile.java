@@ -1,6 +1,7 @@
 
 package simpledb;
 
+import java.awt.image.DataBuffer;
 import java.io.*;
 import java.util.*;
 import java.lang.reflect.*;
@@ -466,7 +467,46 @@ public class LogFile {
         synchronized (Database.getBufferPool()) {
             synchronized(this) {
                 preAppend();
-                // some code goes here
+                // ddi this tid do anything?
+                if (!this.tidToFirstLogRecord.containsKey(tid.getId()))
+                    return;
+                // get the original write offeset
+                long oldOffset = this.currentOffset;
+                // get the log to start reading from
+                long readOffset = oldOffset;
+                long stopOffset = this.tidToFirstLogRecord.get(tid.getId());
+                // we need to read until this point
+                while (readOffset > stopOffset) {
+                    // move to where the log starts
+                    raf.seek(readOffset - 8);
+                    long logStartPos = raf.readLong();
+                    raf.seek(logStartPos);
+                    // read type
+                    int logType = raf.readInt();
+                    if (logType != UPDATE_RECORD) {
+                        raf.seek(logStartPos);
+                        readOffset = raf.getFilePointer();
+                        continue;
+                    }
+                    // read tid
+                    long logTid = raf.readLong();
+                    if (logTid != tid.getId()) {
+                        raf.seek(logStartPos);
+                        readOffset = raf.getFilePointer();
+                        continue;
+                    }
+                    // restore page to disk
+                    Page p = readPageData(raf);
+                    DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
+                    f.writePage(p);
+                    // discard page in buffer pool
+                    Database.getBufferPool().discardPage(p.getId());
+                    raf.seek(logStartPos);
+                    readOffset = raf.getFilePointer();
+                }
+                // restore old offset
+                raf.seek(oldOffset);
+                currentOffset = raf.getFilePointer();
             }
         }
     }
