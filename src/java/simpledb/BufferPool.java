@@ -198,12 +198,7 @@ public class BufferPool {
         are removed from the cache so they can be reused safely
     */
     public synchronized void discardPage(PageId pid) {
-        try {
-            this.flushPage(pid);
-            this.pageMap.remove(pid);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.pageMap.remove(pid);
     }
 
     /**
@@ -265,6 +260,11 @@ public class BufferPool {
         PageId pid = new ArrayList<>(this.pageMap.keySet()).get(0);
         // discard it
         this.discardPage(pid);
+        try {
+            this.flushPage(pid);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void updateBufferPool(ArrayList<Page> pagelist, TransactionId tid) throws DbException {
