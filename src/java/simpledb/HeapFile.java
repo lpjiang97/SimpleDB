@@ -87,8 +87,6 @@ public class HeapFile implements DbFile {
 
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
-        // some code goes here
-        // not necessary for lab1
         int pgNo = page.getId().getPageNumber();
         if (pgNo > this.numPages())
             throw new IllegalArgumentException();
@@ -140,7 +138,6 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
-        // some code goes here
         ArrayList<Page> pageList = new ArrayList<>();
         // get the page which has this tuple
         HeapPage p = (HeapPage) Database.getBufferPool().getPage(tid, t.getRecordId().getPageId(),
