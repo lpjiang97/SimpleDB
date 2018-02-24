@@ -61,9 +61,9 @@
                 \rowcolor{Gray}
                 1 & T1 & - & Update & P1 & \pbox{20cm}{Write A \\ (A $\to$ A1)} & - \\\hline
                 \rowcolor{Gray}
-                2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B1)} & - \\\hline
+                2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B2)} & - \\\hline
                 \rowcolor{Gray}
-                3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C1)} & - \\\hline
+                3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C3)} & - \\\hline
                 \rowcolor{Gray}
                 4 & T2 & 3 & Abort & - & - & - \\\hline
                 \rowcolor{Gray}
@@ -73,9 +73,10 @@
                 \rowcolor{Gray}
                 7 & T2 & 6 & END & - & - & - \\\hline
                 \rowcolor{Gray}
-                8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D1)}  & - \\\hline
+                8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D8)}  & - \\\hline
                 \rowcolor{Gray}
                 9 & T1 & 1 & Commit & - & - & - \\\hline
+                \rowcolor{Gray}
                 10 & T1 & 9 & END & - & - & - \\
             \end{tabularx}
             \crule[Gray]{0.8cm}{0.5cm} : log flushed to disk
@@ -92,16 +93,16 @@
         \begin{center}
             \begin{tabularx}{.8\linewidth}{Y|Y}
                 pageID & recLSN \\\hline
-                P2 & 8 \\
+                p1 & 2 \\\hline
+                P2 & 3 \\
             \end{tabularx}
         \end{center}
-        P1 is not in memory (flushed back to disk), with value A1 and B, pageLSN is 1. \\
-        P2 is in memory, with value C and D1, pageLSN is 8 (though not flushed back to disk). \\
+        P1 is in memory, with value A1 and B, pageLSN is 2. \\
+        P2 is in memory, with value C and D8, pageLSN is 8. \\
     \item Transaction Table:
         \begin{center}
             \begin{tabularx}{.8\linewidth}{Y|Y|Y}
                 TransactionID & lastLSN & Status \\\hline
-                T1 & 9 & Committed\\ \hline
                 T3 & 8 & Running \\
             \end{tabularx}
         \end{center}
@@ -110,18 +111,22 @@
             \begin{tabularx}{.8\linewidth}{Y|Y}
                 pageID & recLSN \\\hline
                 P1 & 1 \\\hline
-                P2 & 8 \\
+                P2 & 3 \\
             \end{tabularx}
         \end{center}
     \item Redo Phase: We start as the firstLSN, which is 1
         \begin{itemize}
-            \item 1: Skipped (pageLSN = LSN)
+            \item 1: Skipped
             \item 2: Redone
-            \item 3 - 7: Skipped (recLSN > LSN)
+            \item 3: Redone
+            \item 4: Skipped
+            \item 5: Redone
+            \item 6: Redone
+            \item 7: Skipped
             \item 8: Redone
-            \item 9: Skipped (commit)
+            \item 9: Skipped
+            \item 10: Skipped
         \end{itemize}
-
     \item Undo Phase:
         \begin{center}
             \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y|Y|Y}
@@ -129,9 +134,9 @@
                 \rowcolor{Gray}
                 1 & T1 & - & Update & P1 & \pbox{20cm}{Write A \\ (A $\to$ A1)} & - \\\hline
                 \rowcolor{Gray}
-                2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B1)} & - \\\hline
+                2 & T2 & - & Update & P1 & \pbox{20cm}{Write B \\ (B $\to$ B2)} & - \\\hline
                 \rowcolor{Gray}
-                3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C1)} & - \\\hline
+                3 & T2 & 2 & Update & P2 & \pbox{20cm}{Write C \\ (C $\to$ C3)} & - \\\hline
                 \rowcolor{Gray}
                 4 & T2 & 3 & Abort & - & - & - \\\hline
                 \rowcolor{Gray}
@@ -141,7 +146,7 @@
                 \rowcolor{Gray}
                 7 & T2 & 6 & END & - & - & - \\\hline
                 \rowcolor{Gray}
-                8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D1)}  & - \\\hline
+                8 & T3 & - & Update & P2 & \pbox{20cm}{Write D \\ (D $\to$ D8)}  & - \\\hline
                 \rowcolor{Gray}
                 9 & T1 & 1 & Commit & - & - & - \\\hline
                 \rowcolor{Gray}
@@ -150,7 +155,7 @@
                 11 & T3 & 8 & CLR & - & \pbox{20cm}{Undo T3 \\ LSN 8} & - \\
             \end{tabularx}
         \end{center}
-        P1 is not in memory (flushed back to disk, no need for redo/undo) \\
+        P1 is in memory, with value A1 and B, pageLSN is 2. \\
         P2 is in memory with original value C and D, pageLSN is 11
 \end{enumerate}
 
