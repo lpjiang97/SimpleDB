@@ -12,4 +12,4 @@ build:
     - ant compile dist
 test:
   script:
-    - for i in {1..100}; do {ant runtest -Dtest=systemtest.LogTest}; done
+    - for i in {1..100}; do ant runtest -Dtest=systemtest.LogTest; done
