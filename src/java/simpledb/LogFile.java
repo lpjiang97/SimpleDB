@@ -5,6 +5,7 @@ import java.awt.image.DataBuffer;
 import java.io.*;
 import java.util.*;
 import java.lang.reflect.*;
+import java.util.concurrent.Callable;
 
 /**
 LogFile implements the recovery subsystem of SimpleDb.  This class is
@@ -83,6 +84,7 @@ public class LogFile {
     static final int UPDATE_RECORD = 3;
     static final int BEGIN_RECORD = 4;
     static final int CHECKPOINT_RECORD = 5;
+    static final int CLR_RECORD = 6;
     static final long NO_CHECKPOINT_ID = -1;
 
     final static int INT_SIZE = 4;
@@ -217,6 +219,30 @@ public class LogFile {
         currentOffset = raf.getFilePointer();
 
         Debug.log("WRITE OFFSET = " + currentOffset);
+    }
+
+    public  synchronized void logCLR(TransactionId tid, Page before,
+                                       Page after)
+        throws IOException  {
+        //Debug.log("WRITE, offset = " + raf.getFilePointer());
+        preAppend();
+        /* CLR record conists of
+
+           record type
+           transaction id
+           before page data (see writePageData)
+           after page data
+           start offset
+        */
+        raf.writeInt(CLR_RECORD);
+        raf.writeLong(tid.getId());
+
+        writePageData(raf,before);
+        writePageData(raf,after);
+        raf.writeLong(currentOffset);
+        currentOffset = raf.getFilePointer();
+
+        //Debug.log("WRITE OFFSET = " + currentOffset);
     }
 
     void writePageData(RandomAccessFile raf, Page p) throws IOException{
@@ -481,26 +507,23 @@ public class LogFile {
                     raf.seek(readOffset - 8);
                     long logStartPos = raf.readLong();
                     raf.seek(logStartPos);
-                    // read type
-                    int logType = raf.readInt();
-                    if (logType != UPDATE_RECORD) {
-                        raf.seek(logStartPos);
-                        readOffset = raf.getFilePointer();
-                        continue;
+                    // read type and tid
+                    if (raf.readInt() == UPDATE_RECORD && raf.readLong() == tid.getId()) {
+                        // restore page to disk
+                        Page p = readPageData(raf);
+                        Page p2 = readPageData(raf);
+                        DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
+                        f.writePage(p);
+                        p.markDirty(false, null);
+                        // add CLR record
+                        this.currentOffset = oldOffset;
+                        raf.seek(oldOffset);
+                        this.logCLR(tid, p2, p);
+                        oldOffset = raf.getFilePointer();
+                        // discard page in buffer pool
+                        Database.getBufferPool().discardPage(p.getId());
                     }
-                    // read tid
-                    long logTid = raf.readLong();
-                    if (logTid != tid.getId()) {
-                        raf.seek(logStartPos);
-                        readOffset = raf.getFilePointer();
-                        continue;
-                    }
-                    // restore page to disk
-                    Page p = readPageData(raf);
-                    DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
-                    f.writePage(p);
-                    // discard page in buffer pool
-                    Database.getBufferPool().discardPage(p.getId());
+                    // continue
                     raf.seek(logStartPos);
                     readOffset = raf.getFilePointer();
                 }
@@ -533,9 +556,100 @@ public class LogFile {
         synchronized (Database.getBufferPool()) {
             synchronized (this) {
                 recoveryUndecided = false;
-                // some code goes here
+                // first look for last checkpoint
+                // get the original write offeset
+                long oldOffset = raf.length();
+                // get the log to start reading from -- beginning or a checkpoint
+                long readOffset = oldOffset;
+                // read first 8 bytes to see if there is a checkpoint
+                raf.seek(0);
+                long checkpointPos = raf.readLong();
+                Map<Long, Long> activeT = this.redo(checkpointPos, oldOffset);
+                raf.seek(oldOffset);
+                this.undo(oldOffset, activeT);
             }
          }
+    }
+
+    private Map<Long, Long> redo(long checkpointPos, long stopOffset) throws IOException {
+        Map<Long, Long> activeT = new HashMap<>();
+        long startOffset = 8;
+        // start at a checkpoint
+        if (checkpointPos != -1) {
+            // skip type and tid, we know it's CHECKPOINT
+            raf.seek(checkpointPos);
+            raf.skipBytes(4 + 8);
+            int n = raf.readInt();
+            while (n > 0) {
+                // add active transactions
+                activeT.put(raf.readLong(), raf.readLong());
+                n--;
+            }
+            raf.skipBytes(8);
+            startOffset = raf.getFilePointer();
+        }
+        // redo forward
+        while (startOffset < stopOffset) {
+            long logStartPos = raf.getFilePointer();
+            int logType = raf.readInt();
+            long logTid = raf.readLong();
+            switch (logType) {
+                case BEGIN_RECORD:
+                    activeT.put(logTid, logStartPos);
+                    break;
+                case ABORT_RECORD:
+                case COMMIT_RECORD:
+                    activeT.remove(logTid);
+                    break;
+                case CLR_RECORD:
+                case UPDATE_RECORD:
+                    // redo changes
+                    this.readPageData(raf);
+                    Page p = this.readPageData(raf);
+                    DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
+                    f.writePage(p);
+                    p.markDirty(false, null);
+                    Database.getBufferPool().discardPage(p.getId());
+                    break;
+                default:
+                    // we get a CHECKPOINT log, which shouldn't happen
+                    System.err.println(logTid);
+                    throw new IOException("Get a checkpoint log");
+            }
+            raf.skipBytes(8);
+            startOffset = raf.getFilePointer();
+        }
+        return activeT;
+    }
+
+    private void undo(long startOffset, Map<Long, Long> activeT) throws IOException {
+        List<Long> logStarts = new ArrayList<>(activeT.values());
+        Collections.sort(logStarts);
+        System.err.println(logStarts.size());
+        // we stop undoing at the smallest active LSN
+        long stopOffset;
+        if (logStarts.size() > 0)
+            stopOffset = logStarts.get(0);
+        else
+            stopOffset = 8;
+        // undo backward
+        while (startOffset > stopOffset) {
+            // move to where the log starts
+            raf.seek(startOffset - 8);
+            long logStartPos = raf.readLong();
+            raf.seek(logStartPos);
+            int logType = raf.readInt();
+            long logTid = raf.readLong();
+            if (logType == UPDATE_RECORD && activeT.containsKey(logTid)) {
+                Page p = readPageData(raf);
+                DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
+                f.writePage(p);
+                p.markDirty(false, null);
+                Database.getBufferPool().discardPage(p.getId());
+            }
+            raf.seek(logStartPos);
+            startOffset = raf.getFilePointer();
+        }
     }
 
     /** Print out a human readable represenation of the log */
