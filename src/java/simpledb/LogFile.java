@@ -53,7 +53,7 @@ transaction id.
 <li> Each log record ends with a long integer file offset representing
 the position in the log file where the record began.
 
-<li> There are five record types: ABORT, COMMIT, UPDATE, BEGIN, and
+<li> There are five record types: ABORT, COMMIT, UPDATE, CLR, BEGIN, and
 CHECKPOINT
 
 <li> ABORT, COMMIT, and BEGIN records contain no additional data
@@ -62,6 +62,10 @@ CHECKPOINT
 after image.  These images are serialized Page objects, and can be
 accessed with the LogFile.readPageData() and LogFile.writePageData()
 methods.  See LogFile.print() for an example.
+
+<li>CLR RECORDS has the same format as UPDATE RECORDS. It is used to
+record rollback actions, whose records should be the reverse of the
+corresponding UPDATE record
 
 <li> CHECKPOINT records consist of active transactions at the time
 the checkpoint was taken and their first log record on disk.  The format
@@ -221,19 +225,20 @@ public class LogFile {
         Debug.log("WRITE OFFSET = " + currentOffset);
     }
 
-    public  synchronized void logCLR(TransactionId tid, Page before,
+    /**
+     * Write an CLR record to disk for the specified tid (which is aborted) and page (with provided before and
+     * after images)
+     *
+     * @param tid the transaction performing the rollback
+     * @param before the before image of the page
+     * @param after the after image of the page
+     * @throws IOException
+     */
+    public synchronized void logCLR(TransactionId tid, Page before,
                                        Page after)
         throws IOException  {
-        //Debug.log("WRITE, offset = " + raf.getFilePointer());
-        //preAppend();
-        /* CLR record conists of
+        preAppend();
 
-           record type
-           transaction id
-           before page data (see writePageData)
-           after page data
-           start offset
-        */
         raf.writeInt(CLR_RECORD);
         raf.writeLong(tid.getId());
 
@@ -241,8 +246,6 @@ public class LogFile {
         writePageData(raf,after);
         raf.writeLong(currentOffset);
         currentOffset = raf.getFilePointer();
-
-        //Debug.log("WRITE OFFSET = " + currentOffset);
     }
 
     void writePageData(RandomAccessFile raf, Page p) throws IOException{
@@ -558,8 +561,6 @@ public class LogFile {
                 // first look for last checkpoint
                 // get the original write offeset
                 long oldOffset = raf.length();
-                // get the log to start reading from -- beginning or a checkpoint
-                long readOffset = oldOffset;
                 // read first 8 bytes to see if there is a checkpoint
                 raf.seek(0);
                 long checkpointPos = raf.readLong();
@@ -570,6 +571,19 @@ public class LogFile {
         }
     }
 
+    /**
+     * Redo the changes during recovery phase. Note that the method is only called by recovery, which is thread-safe.
+     * To be called by other methods in the future, redo needs to be changed to thread-safe.
+     *
+     * @param checkpointPos the byte offset of the checkpoint to start repo from. Start from the beginning of the file
+     *                      if -1
+     * @param stopOffset the byte offset to stop redoing
+     * @return the loser transaction map whose key is the transaction id, value is the byte offset of the first active
+     *         log record of this transaction
+     *
+     * @throws IOException
+     * @see LogFile#recover
+     */
     private Map<Long, Long> redo(long checkpointPos, long stopOffset) throws IOException {
         Map<Long, Long> activeT = new HashMap<>();
         long startOffset = 8;
@@ -617,8 +631,18 @@ public class LogFile {
             startOffset = raf.getFilePointer();
         }
         return activeT;
-}
+    }
 
+    /**
+     * Undo the changes during recovery phase. Note that the method is only called by recovery, which is thread-safe.
+     * To be called by other methods in the future, redo needs to be changed to thread-safe.
+     *
+     * @param startOffset the byte offset to start undo from.
+     * @param activeT the loser transaction map whose keys are the transaction ids which need undoing, values are
+     *                the byte offset of the first active record of that id
+     * @throws IOException
+     * @see LogFile#recover
+     */
     private void undo(long startOffset, Map<Long, Long> activeT) throws IOException {
         List<Long> logStarts = new ArrayList<>(activeT.values());
         Collections.sort(logStarts);
