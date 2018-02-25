@@ -229,18 +229,18 @@ public class LogFile {
      * Write an CLR record to disk for the specified tid (which is aborted) and page (with provided before and
      * after images)
      *
-     * @param tid the transaction performing the rollback
+     * @param tid the transaction id performing the rollback
      * @param before the before image of the page
      * @param after the after image of the page
      * @throws IOException
      */
-    public synchronized void logCLR(TransactionId tid, Page before,
+    public synchronized void logCLR(long tid, Page before,
                                        Page after)
         throws IOException  {
         preAppend();
 
         raf.writeInt(CLR_RECORD);
-        raf.writeLong(tid.getId());
+        raf.writeLong(tid);
 
         writePageData(raf,before);
         writePageData(raf,after);
@@ -520,7 +520,7 @@ public class LogFile {
                         // add CLR record
                         this.currentOffset = oldOffset;
                         raf.seek(oldOffset);
-                        this.logCLR(tid, newPage, oldPage);
+                        this.logCLR(tid.getId(), newPage, oldPage);
                         oldOffset = raf.getFilePointer();
                         // discard page in buffer pool
                         Database.getBufferPool().discardPage(oldPage.getId());
@@ -567,6 +567,7 @@ public class LogFile {
                 Map<Long, Long> activeT = this.redo(checkpointPos, oldOffset);
                 raf.seek(oldOffset);
                 this.undo(oldOffset, activeT);
+                force();
             }
         }
     }
@@ -648,6 +649,7 @@ public class LogFile {
         Collections.sort(logStarts);
         // we stop undoing at the smallest active LSN
         long stopOffset;
+        long appendOffset = startOffset;
         if (logStarts.size() > 0)
             stopOffset = logStarts.get(0);
         else
@@ -662,9 +664,15 @@ public class LogFile {
             long logTid = raf.readLong();
             if (logType == UPDATE_RECORD && activeT.containsKey(logTid)) {
                 Page p = readPageData(raf);
+                Page p2 = readPageData(raf);
                 DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
                 f.writePage(p);
                 Database.getBufferPool().discardPage(p.getId());
+                // append the CLR record
+                this.currentOffset = appendOffset;
+                raf.seek(appendOffset);
+                this.logCLR(logTid, p2, p);
+                appendOffset = raf.getFilePointer();
             }
             raf.seek(logStartPos);
             startOffset = raf.getFilePointer();
