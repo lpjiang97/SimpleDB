@@ -215,7 +215,6 @@ public class BufferPool {
             // add log record
             Database.getLogFile().logWrite(tid, p.getBeforeImage(), p);
             Database.getLogFile().force();
-            p.setBeforeImage();
             // write to disk
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(p);
             // unmark dirty status
@@ -232,8 +231,9 @@ public class BufferPool {
                 // NO FORCE, only write the log file without flushing the page
                 Database.getLogFile().logWrite(tid, p.getBeforeImage(), p);
                 Database.getLogFile().force();
-                p.setBeforeImage();
             }
+            if (lm.holdsLock(tid, p.getId()))
+                p.setBeforeImage();
         }
     }
 
