@@ -225,7 +225,7 @@ public class LogFile {
                                        Page after)
         throws IOException  {
         //Debug.log("WRITE, offset = " + raf.getFilePointer());
-        preAppend();
+        //preAppend();
         /* CLR record conists of
 
            record type
@@ -507,21 +507,20 @@ public class LogFile {
                     raf.seek(readOffset - 8);
                     long logStartPos = raf.readLong();
                     raf.seek(logStartPos);
-                    // read type and tid
                     if (raf.readInt() == UPDATE_RECORD && raf.readLong() == tid.getId()) {
                         // restore page to disk
-                        Page p = readPageData(raf);
-                        Page p2 = readPageData(raf);
-                        DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
-                        f.writePage(p);
-                        p.markDirty(false, null);
+                        Page oldPage = readPageData(raf);
+                        Page newPage = readPageData(raf);
+                        DbFile f = Database.getCatalog().getDatabaseFile(oldPage.getId().getTableId());
+                        f.writePage(oldPage);
+                        oldPage.markDirty(false, null);
                         // add CLR record
                         this.currentOffset = oldOffset;
                         raf.seek(oldOffset);
-                        this.logCLR(tid, p2, p);
+                        this.logCLR(tid, newPage, oldPage);
                         oldOffset = raf.getFilePointer();
                         // discard page in buffer pool
-                        Database.getBufferPool().discardPage(p.getId());
+                        Database.getBufferPool().discardPage(oldPage.getId());
                     }
                     // continue
                     raf.seek(logStartPos);
@@ -568,7 +567,7 @@ public class LogFile {
                 raf.seek(oldOffset);
                 this.undo(oldOffset, activeT);
             }
-         }
+        }
     }
 
     private Map<Long, Long> redo(long checkpointPos, long stopOffset) throws IOException {
@@ -608,24 +607,21 @@ public class LogFile {
                     Page p = this.readPageData(raf);
                     DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
                     f.writePage(p);
-                    p.markDirty(false, null);
                     Database.getBufferPool().discardPage(p.getId());
                     break;
                 default:
                     // we get a CHECKPOINT log, which shouldn't happen
-                    System.err.println(logTid);
                     throw new IOException("Get a checkpoint log");
             }
             raf.skipBytes(8);
             startOffset = raf.getFilePointer();
         }
         return activeT;
-    }
+}
 
     private void undo(long startOffset, Map<Long, Long> activeT) throws IOException {
         List<Long> logStarts = new ArrayList<>(activeT.values());
         Collections.sort(logStarts);
-        System.err.println(logStarts.size());
         // we stop undoing at the smallest active LSN
         long stopOffset;
         if (logStarts.size() > 0)
@@ -644,7 +640,6 @@ public class LogFile {
                 Page p = readPageData(raf);
                 DbFile f = Database.getCatalog().getDatabaseFile(p.getId().getTableId());
                 f.writePage(p);
-                p.markDirty(false, null);
                 Database.getBufferPool().discardPage(p.getId());
             }
             raf.seek(logStartPos);

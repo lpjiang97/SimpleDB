@@ -215,6 +215,7 @@ public class BufferPool {
             // add log record
             Database.getLogFile().logWrite(tid, p.getBeforeImage(), p);
             Database.getLogFile().force();
+            p.setBeforeImage();
             // write to disk
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(p);
             // unmark dirty status
