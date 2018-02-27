@@ -53,7 +53,7 @@ transaction id.
 <li> Each log record ends with a long integer file offset representing
 the position in the log file where the record began.
 
-<li> There are five record types: ABORT, COMMIT, UPDATE, CLR, BEGIN, and
+<li> There are six record types: ABORT, COMMIT, UPDATE, CLR, BEGIN, and
 CHECKPOINT
 
 <li> ABORT, COMMIT, and BEGIN records contain no additional data
