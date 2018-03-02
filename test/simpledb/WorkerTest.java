@@ -176,71 +176,71 @@ public class WorkerTest extends ParallelTestBase {
         NioSocketAcceptor pseudoServer = ParallelUtility.createAcceptor();
         final Worker worker = new Worker(workers[0].getId(), server.getId());
         try {
-            pseudoServer.setHandler(new IoHandlerAdapter() {
-                public void messageReceived(IoSession session, Object message) {
-                    if (message instanceof TupleBag) {
-                        TupleBag tuples = (TupleBag) message;
+            try {
+                pseudoServer.setHandler(new IoHandlerAdapter() {
+                    public void messageReceived(IoSession session, Object message) {
+                        if (message instanceof TupleBag) {
+                            TupleBag tuples = (TupleBag) message;
 
-                        LinkedBlockingQueue<ExchangeMessage> q = serverBuffer
-                                .get(tuples.getOperatorID());
-                        if (q == null) {
-                            q = new LinkedBlockingQueue<ExchangeMessage>();
-                            serverBuffer.put(tuples.getOperatorID(), q);
+                            LinkedBlockingQueue<ExchangeMessage> q = serverBuffer
+                                    .get(tuples.getOperatorID());
+                            if (q == null) {
+                                q = new LinkedBlockingQueue<ExchangeMessage>();
+                                serverBuffer.put(tuples.getOperatorID(), q);
+                            }
+                            q.offer(tuples);
                         }
-                        q.offer(tuples);
+                    }
+                });
+                pseudoServer.bind(this.server.getAddress());
+
+                worker.init();
+                worker.start();
+                worker.receiveQuery(serializePlan(masterPlan));
+                worker.executeQuery();
+                long timeoutMS = 5 * 1000;
+                long current = System.currentTimeMillis();
+                while (worker.isRunning()) {
+                    Thread.sleep(100);
+                    if (System.currentTimeMillis() - current > timeoutMS)
+                        break;
+                }
+            } finally {
+                worker.shutdown();
+            }
+
+            // The worker should have finished the query;
+            Assert.assertTrue(!worker.isRunning());
+
+            HashSet<String> serverReceivedTuples = new HashSet<String>();
+            boolean seenEOS = false;
+            long start = System.currentTimeMillis();
+
+            getData:
+            while (true) {
+                for (ParallelOperatorID oid : serverBuffer.keySet()) {
+                    LinkedBlockingQueue<ExchangeMessage> q = serverBuffer.get(oid);
+                    TupleBag tb = null;
+                    while ((tb = (TupleBag) q.poll()) != null) {
+                        if (tb.isEos()) {
+                            seenEOS = true;
+                            break getData;
+                        }
+                        Iterator<Tuple> it = tb.iterator();
+                        while (it.hasNext()) {
+                            serverReceivedTuples.add(it.next().toString());
+                        }
                     }
                 }
-            });
-            pseudoServer.bind(this.server.getAddress());
+                long end = System.currentTimeMillis();
+                if (end - start > 10 * 1000)
+                    // Receive data for at most ten seconds, if time expire, exit
+                    // directly
+                    break getData;
+                if (!seenEOS)
+                    Thread.sleep(10);
 
-            worker.init();
-            worker.start();
-            worker.receiveQuery(serializePlan(masterPlan));
-            worker.executeQuery();
-            long timeoutMS = 5 * 1000;
-            long current = System.currentTimeMillis();
-            while (worker.isRunning()) {
-                Thread.sleep(100);
-                if (System.currentTimeMillis() - current > timeoutMS)
-                    break;
             }
-        } finally {
-            worker.shutdown();
-            System.out.println("Before unbind");
-            ParallelUtility.unbind(pseudoServer);
-            System.out.println("After unbind");
-        }
-
-        // The worker should have finished the query;
-        Assert.assertTrue(!worker.isRunning());
-
-        HashSet<String> serverReceivedTuples = new HashSet<String>();
-        boolean seenEOS = false;
-        long start = System.currentTimeMillis();
-        getData: while (true) {
-            for (ParallelOperatorID oid : serverBuffer.keySet()) {
-                LinkedBlockingQueue<ExchangeMessage> q = serverBuffer.get(oid);
-                TupleBag tb = null;
-                while ((tb = (TupleBag) q.poll()) != null) {
-                    if (tb.isEos()) {
-                        seenEOS = true;
-                        break getData;
-                    }
-                    Iterator<Tuple> it = tb.iterator();
-                    while (it.hasNext()) {
-                        serverReceivedTuples.add(it.next().toString());
-                    }
-                }
-            }
-            long end = System.currentTimeMillis();
-            if (end - start > 10 * 1000)
-                // Receive data for at most ten seconds, if time expire, exit
-                // directly
-                break getData;
-            if (!seenEOS)
-                Thread.sleep(10);
-
-        }
 
         // EOS message should have been received
         Assert.assertTrue(seenEOS);
@@ -251,7 +251,14 @@ public class WorkerTest extends ParallelTestBase {
         Assert.assertTrue(serverReceivedTuples.containsAll(tuples)
                 && tuples.containsAll(serverReceivedTuples));
 
+        } finally {
+            System.out.println("Before unbind");
+            ParallelUtility.unbind(pseudoServer);
+            System.out.println("After unbind");
+        }
+
         System.out.println("FInal");
     }
 
 }
+
