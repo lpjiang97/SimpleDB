@@ -259,13 +259,13 @@ public class BufferPool {
         // STEAL
         // pick the first page
         PageId pid = new ArrayList<>(this.pageMap.keySet()).get(0);
-        // discard it
-        this.discardPage(pid);
         try {
             this.flushPage(pid);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // discard it
+        this.discardPage(pid);
     }
 
     private void updateBufferPool(ArrayList<Page> pagelist, TransactionId tid) throws DbException {
