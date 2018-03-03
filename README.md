@@ -211,7 +211,7 @@ We provided you with the code for the coordinator (see `simpledb.parallel.Server
 
 Note that before you implement the actual query execution on workers, for each query, the workers will hang.
 
-The majority of the Worker class is already provided. You only need to implement two methods: `localizeQueryPlan` and `executeQuery`. For the latter, you
+The majority of the Worker class is already provided. You only need to implement three methods: `localizeQueryPlan`, `executeQuery`, and `start`. For `executeQuery`, you
 will see that you really need to implement the `run()` method in the `WorkingThread` class for `Worker.java`, but keep reading before you start adding code. 
 
 After a query plan is received from the coordinator, a worker needs to replace some database information in the query plan with local versions of the same information. Three changes need to be made to the query plan inside the `localizeQueryPlan` method. In this method, your receive as input a query plan in the form of a tree of operators. You need to traverse that tree of operators from the root to the leaves. For each operator, you need to check whether it is a sequential scan, a producer, or a consumer operator. For these operators, you need to make the following changes:
@@ -221,6 +221,8 @@ After a query plan is received from the coordinator, a worker needs to replace s
 *   For each consumer type of operator, you need to associate an input buffer with that operator. The reason is that the system will accumulate all incoming tuples into a set of buffers. We need to then link each buffer to the appropriate consumer operator. (_Hint_: check the declaration of the data structure `inBuffer` in class `Worker`. Use the operator ID to find the right buffer in this data structure.)
 
 The `executeQuery` method does the real query execution. This method uses a separate thread to execute the query. Complete the implementation of `WorkingThread.run` by adding code to execute the query. (_Hint_: The root of a query plan is always a `CollectProducer`.)
+
+Finally, the `start` method starts the working thread at the worker.
 
 #### Exercise 1
 
