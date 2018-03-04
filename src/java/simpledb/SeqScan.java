@@ -17,6 +17,8 @@ public class SeqScan implements OpIterator {
     private TransactionId tid;
     private int tableid;
     private String tableAlias;
+    private String tableName;
+    private TupleDesc td;
     private transient DbFileIterator it;
 
     /**
@@ -39,6 +41,7 @@ public class SeqScan implements OpIterator {
         // some code goes here
         this.tid = tid;
         this.reset(tableid, tableAlias);
+
         this.it = null;
     }
 
@@ -48,7 +51,7 @@ public class SeqScan implements OpIterator {
      *       be the actual name of the table in the catalog of the database
      * */
     public String getTableName() {
-        return Database.getCatalog().getTableName(this.tableid);
+        return this.tableName;
     }
 
     /**
@@ -74,6 +77,8 @@ public class SeqScan implements OpIterator {
     public void reset(int tableid, String tableAlias) {
         this.tableid = tableid;
         this.tableAlias = tableAlias;
+        this.tableName = Database.getCatalog().getTableName(this.tableid);
+        this.td = Database.getCatalog().getTupleDesc(this.tableid);
     }
 
     public SeqScan(TransactionId tid, int tableId) {
@@ -97,7 +102,7 @@ public class SeqScan implements OpIterator {
      *         prefixed with the tableAlias string from the constructor.
      */
     public TupleDesc getTupleDesc() {
-        TupleDesc noPrefix = Database.getCatalog().getDatabaseFile(this.tableid).getTupleDesc();
+        TupleDesc noPrefix = this.td;
         int length = noPrefix.numFields();
         // new TupleDesc
         Type[] types = new Type[length];

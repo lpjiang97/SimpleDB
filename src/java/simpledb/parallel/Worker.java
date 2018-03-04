@@ -287,7 +287,6 @@ public class Worker {
             return;
         }
 
-        Worker.this.localizeQueryPlan(query);
         new QueryPlanVisualizer().printQueryPlanTree(query, System.out);
         ArrayList<ParallelOperatorID> ids = new ArrayList<ParallelOperatorID>();
         collectConsumerOperatorIDs(query, ids);
@@ -297,6 +296,7 @@ public class Worker {
                     new LinkedBlockingQueue<ExchangeMessage>());
         }
         // }
+        Worker.this.localizeQueryPlan(query);
         Worker.this.queryPlan = query;
     }
 
