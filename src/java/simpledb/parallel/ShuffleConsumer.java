@@ -28,10 +28,14 @@ public class ShuffleConsumer extends Consumer {
         this(null, operatorID, workers);
     }
 
+    private OpIterator child;
+    private SocketInfo[] workers;
+
     public ShuffleConsumer(ShuffleProducer child,
             ParallelOperatorID operatorID, SocketInfo[] workers) {
         super(operatorID);
-        // some code goes here
+        this.child = child;
+        this.workers = workers;
     }
 
     @Override
@@ -78,13 +82,12 @@ public class ShuffleConsumer extends Consumer {
 
     @Override
     public OpIterator[] getChildren() {
-        // some code goes here
-        return null;
+        return new OpIterator[]{this.child};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
-        // some code goes here
+        this.child = children[0];
     }
 
 }

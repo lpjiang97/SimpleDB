@@ -2,20 +2,14 @@ package simpledb.parallel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 
-import simpledb.Operator;
-import simpledb.Database;
-import simpledb.OpIterator;
-import simpledb.QueryPlanVisualizer;
+import simpledb.*;
 
 import simpledb.parallel.Exchange.ParallelOperatorID;
 
@@ -55,18 +49,17 @@ public class Worker {
                 query = Worker.this.queryPlan;
                 // }
                 if (query != null) {
-                    // try {
-                    // some code goes here
-                    //} catch (DbException e1) {
-                    //    e1.printStackTrace();
-                    //} catch (TransactionAbortedException e1) {
-                    //    e1.printStackTrace();
-                    //} catch (InterruptedException e) {
-                    // e.printStackTrace();
-                    // }
+                    try {
+                        query.open();
+                        ((CollectProducer) query).fetchNext();
+                        query.close();
+                    } catch (DbException e) {
+                        e.printStackTrace();
+                    } catch (TransactionAbortedException e) {
+                        e.printStackTrace();
+                    }
                     Worker.this.finishQuery();
                 }
-
                 synchronized (Worker.this.workingThread) {
                     try {
                         // wait until a query plan is received
@@ -134,6 +127,7 @@ public class Worker {
         acceptor.bind(new InetSocketAddress(host, port));
 
         // You need to implement for Lab 6: Make sure to start the worker thread.
+        Worker.this.workingThread.start();
     }
 
     /**
@@ -215,7 +209,31 @@ public class Worker {
      * information.
      * */
     public void localizeQueryPlan(OpIterator queryPlan) {
-        // some code goes here
+        if (queryPlan instanceof Operator) {
+            OpIterator[] children = ((Operator) queryPlan).getChildren();
+            if (children.length == 0)
+                return;
+            for (OpIterator op : children) {
+                localize(op);
+                localizeQueryPlan(op);
+            }
+        }
+        localize(queryPlan);
+    }
+
+    private void localize(OpIterator op) {
+        // localization
+        if (op instanceof SeqScan) {
+            // the file name
+            String tableName = ((SeqScan) op).getAlias();
+            // replace with local file
+            int tid = Database.getCatalog().getTableId(tableName);
+            ((SeqScan) op).reset(tid, tableName);
+        } else if (op instanceof Producer) {
+            ((Producer) op).setThisWorker(Worker.this);
+        } else if (op instanceof Consumer) {
+            ((Consumer) op).setBuffer(Worker.this.inBuffer.get(((Consumer) op).getOperatorID()));
+        }
     }
 
     /**
@@ -418,3 +436,4 @@ public class Worker {
         }
     }
 }
+

@@ -19,10 +19,17 @@ public class ShuffleProducer extends Producer {
         return "shuffle_p";
     }
 
+    private OpIterator child;
+    private SocketInfo[] workers;
+    private PartitionFunction<?, ?> pf;
+
     public ShuffleProducer(OpIterator child, ParallelOperatorID operatorID,
                            SocketInfo[] workers, PartitionFunction<?, ?> pf) {
         super(operatorID);
         // some code goes here
+        this.child = child;
+        this.workers = workers;
+        this.pf = pf;
     }
 
     public void setPartitionFunction(PartitionFunction<?, ?> pf) {
@@ -75,12 +82,11 @@ public class ShuffleProducer extends Producer {
 
     @Override
     public OpIterator[] getChildren() {
-        // some code goes here
-        return null;
+        return new OpIterator[]{this.child};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
-        // some code goes here
+        this.child = children[0];
     }
 }
