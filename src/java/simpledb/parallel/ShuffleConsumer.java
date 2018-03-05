@@ -1,5 +1,8 @@
 package simpledb.parallel;
 
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import simpledb.DbException;
 import simpledb.OpIterator;
@@ -31,33 +34,58 @@ public class ShuffleConsumer extends Consumer {
     private OpIterator child;
     private SocketInfo[] workers;
 
+    private final BitSet workerEOS;
+    private final HashMap<String, Integer> workerIdToIndex;
+
+    private transient Iterator<Tuple> tuples;
+    private transient int innerBufferIndex;
+    private transient ArrayList<TupleBag> innerBuffer;
+
     public ShuffleConsumer(ShuffleProducer child,
             ParallelOperatorID operatorID, SocketInfo[] workers) {
         super(operatorID);
         this.child = child;
         this.workers = workers;
+        this.workerIdToIndex = new HashMap<>();
+        int idx = 0;
+        for (SocketInfo w : workers)
+            this.workerIdToIndex.put(w.getId(), idx++);
+        this.workerEOS = new BitSet(workers.length);
     }
 
     @Override
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        this.tuples = null;
+        this.innerBuffer = new ArrayList<>();
+        this.innerBufferIndex = 0;
+        if (child != null)
+            this.child.open();
+        super.open();
     }
 
     @Override
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        this.tuples = null;
+        this.innerBufferIndex = 0;
     }
 
     @Override
     public void close() {
         // some code goes here
+        super.close();
+        this.setBuffer(null);
+        this.tuples = null;
+        this.innerBufferIndex = -1;
+        this.innerBuffer = null;
+        this.workerEOS.clear();
     }
 
     @Override
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
-
+        if (child == null)
+            return null;
+        return child.getTupleDesc();
     }
 
     /**
@@ -70,14 +98,37 @@ public class ShuffleConsumer extends Consumer {
      *         of file message.
      */
     Iterator<Tuple> getTuples() throws InterruptedException {
-        // some code goes here
+        TupleBag tb = null;
+        if (this.innerBufferIndex < this.innerBuffer.size())
+            return this.innerBuffer.get(this.innerBufferIndex++).iterator();
+
+        while (this.workerEOS.nextClearBit(0) < this.workers.length) {
+            tb = (TupleBag)this.take(-1);
+            if (tb.isEos()) {
+                this.workerEOS.set(this.workerIdToIndex.get(tb.getWorkerID()));
+            } else {
+                innerBuffer.add(tb);
+                this.innerBufferIndex++;
+                return tb.iterator();
+            }
+        }
+        // have received all the eos message from all the workers
         return null;
     }
 
     @Override
     protected Tuple fetchNext() throws DbException, TransactionAbortedException {
-        // some code goes here
-        return null;
+        while (tuples == null || !tuples.hasNext()) {
+	    try {
+            this.tuples = getTuples();
+	    } catch (InterruptedException e) {
+	        e.printStackTrace();
+            throw new DbException(e.getLocalizedMessage());
+	    }
+	    if (tuples == null) // finish
+            return null;
+        }
+        return tuples.next();
     }
 
     @Override
