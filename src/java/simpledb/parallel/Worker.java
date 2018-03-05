@@ -225,10 +225,10 @@ public class Worker {
         // localization
         if (op instanceof SeqScan) {
             // the file name
-            String tableName = ((SeqScan) op).getAlias();
+            String tableName = ((SeqScan) op).getTableName();
             // replace with local file
             int tid = Database.getCatalog().getTableId(tableName);
-            ((SeqScan) op).reset(tid, tableName);
+            ((SeqScan) op).reset(tid, ((SeqScan) op).getAlias());
         } else if (op instanceof Producer) {
             ((Producer) op).setThisWorker(Worker.this);
         } else if (op instanceof Consumer) {
