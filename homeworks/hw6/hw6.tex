@@ -1,0 +1,86 @@
+\documentclass[10pt]{myland}
+\usepackage{amsmath}
+\usepackage{relsize}
+
+%bowtie sign
+\let\oldtriangleleft\triangleleft
+\renewcommand\triangleleft{\mathbin{\color{green}\oldtriangleleft}}
+\DeclareRobustCommand\bowtie{\mathrel\triangleright\joinrel\mathrel\oldtriangleleft}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\begin{center}
+	{\Large CSE 444: Homework 6} \\
+	\vspace{.05in} 
+    Linxing Preston Jiang \quad Winter 2018 \\
+	\vspace{.05in} 
+    \today \\
+\end{center}
+\vspace{.15in} \hrule \vspace{0.5em}%
+
+\section{Parallel Data Processing}
+\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=1em]
+    \item See below
+    \begin{center}
+    \scalebox{0.6}{
+        \begin{tikzpicture}[
+            >=latex,shorten >=2pt,shorten <=2pt,shape aspect=1,
+        ]
+            \tikzstyle{cyl} = [cylinder, shape border rotate=90, draw, minimum height=1cm, minimum width=5cm]
+            \tikzstyle{noo} = [rectangle, draw, minimum height=1cm, minimum width=5cm]
+            \tikzstyle{cir} = [ellipse, draw, minimum height=1cm, minimum width=2cm]
+            \tikzstyle{joining} = []
+
+            \node[cyl](db1) at (-10, 0) {$\frac{1}{3} $of $R$ and $S$};
+            \node[cyl](db2) at (0, 0) {$\frac{1}{3} $of $R$ and $S$};
+            \node[cyl](db3) at (10, 0) {$\frac{1}{3} $of $R$ and $S$};
+            \node[noo](node1) at (-10, 3) {Node 1};
+            \node[noo](node2) at (0, 3) {Node 2};
+            \node[noo](node3) at (10, 3) {Node 3};
+            \node[cir] (scan11) at (-12, 4) {Scan $R$};
+            \node[cir] (scan12) at (-8, 4) {Scan $S$};
+            \node[cir] (scan21) at (-2, 4) {Scan $R$};
+            \node[cir] (scan22) at (2, 4) {Scan $S$};
+            \node[cir] (scan31) at (8, 4) {Scan $R$};
+            \node[cir] (scan32) at (12, 4) {Scan $S$};
+            \node[cir] (sel1) at (-8, 6) {$\sigma_{S.d > 0}$};
+            \node[cir] (sel2) at (2, 6) {$\sigma_{S.d > 0}$};
+            \node[cir] (sel3) at (12, 6) {$\sigma_{S.d > 0}$};
+            \node[cir] (gc1) at (-8, 8) {$\gamma_{S.c, \text{sum(d)}\to s, \text{count(d)}\to c}$};
+            \node[cir] (gc2) at (2, 8) {$\gamma_{S.c, \text{sum(d)}\to s, \text{count(d)}\to c}$};
+            \node[cir] (gc3) at (12, 8) {$\gamma_{S.c, \text{sum(d)}\to s, \text{count(d)}\to c}$};
+            \node[cir] (hb1) at (-12, 8) {hash on $R.b$};
+            \node[cir] (hb2) at (-2, 8) {hash on $R.b$};
+            \node[cir] (hb3) at (8, 8) {hash on $R.b$};
+            \node[joining] (j1) at (-10, 10) {\larger[3]$\bowtie_{R.b = S.c}$};
+            \node[joining] (j2) at (0, 10) {\larger[3]$\bowtie_{R.b = S.c}$};
+            \node[joining] (j3) at (10, 10) {\larger[3]$\bowtie_{R.b = S.c}$};
+            \node[cir] (ga1) at (-10, 12) {$\gamma_{R.a, \text{sum(s)}\to s_1, \text{sum(c)}\to c_1}$};
+            \node[cir] (ga2) at (0, 12) {$\gamma_{R.a, \text{sum(s)}\to s_1, \text{sum(c)}\to c_1}$};
+            \node[cir] (ga3) at (10, 12) {$\gamma_{R.a, \text{sum(s)}\to s_1, \text{sum(c)}\to c_1}$};
+            \node[cir] (ha1) at (-10, 14) {hash on $R.a$};
+            \node[cir] (ha2) at (0, 14) {hash on $R.a$};
+            \node[cir] (ha3) at (10, 14) {hash on $R.a$};
+            \node[cir] (ans1) at (-10, 16) {$\gamma_{R.a, \text{sum}(s1)/\text{sum(c1)}\to\text{avg}(d)}$};
+            \node[cir] (ans2) at (0, 16) {$\gamma_{R.a, \text{sum}(s1)/\text{sum(c1)}\to\text{avg}(d)}$};
+            \node[cir] (ans3) at (10, 16) {$\gamma_{R.a, \text{sum}(s1)/\text{sum(c1)}\to\text{avg}(d)}$};
+            % link nodes
+            \foreach \n in {1, 2, 3} {
+                \path (scan\n2) edge (sel\n);
+                \path (scan\n1) edge (hb\n);
+                \path (sel\n) edge (gc\n);
+                \path (gc\n) edge (j\n);
+                \path (j\n) edge (ga\n);
+                \path (ga\n) edge (ha\n);
+            }
+            \foreach \x in {1, 2, 3} {
+                \foreach \y in {1, 2, 3} {
+                    \path (hb\x) edge (j\y);
+                    \path (ha\x) edge (ans\y);
+                }
+            }
+        \end{tikzpicture}
+    }
+    \end{center}
+\end{enumerate}
+\end{document}
