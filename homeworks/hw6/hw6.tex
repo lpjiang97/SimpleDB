@@ -82,5 +82,44 @@
         \end{tikzpicture}
     }
     \end{center}
+    \item We will MapReduce twice:
+        \begin{itemize}
+            \item First round:
+                \begin{itemize}
+                    \item Map: Map function on $R$: Use $R.b$ as key, write value as $('R', R.a)$; map function on $S$:
+                        First apply filter on $S.d > 0$, use $S.c$ as key, write value as $('S', S.d)$
+                    \item Reduce: The same value of $R.b$ and $S.c$ as the key, perform a local join and output value is
+                        $(R.a, S.d)$
+                \end{itemize}
+            \item Second round (MapReduce on $(R.a, S.d)$):
+                \begin{itemize}
+                    \item Map: Use $R.a$ as the key, output value as $(S.d)$
+                    \item Reduce: Input is now $S.d$ with the same value of $R.a$. Output $R.a$ and $\frac{sum(S.d)}{count(S.d)}$
+                        as the average.
+                \end{itemize}
+        \end{itemize}
+\end{enumerate}
+
+\section{Distribution and Replication}
+\begin{enumerate}
+    \item Subordinate will scan the log file and find there is PREPARE by no COMMIT/ABORT. It will keep asking the
+        coordinator for a final decision. If it's commit, we redo the transaction. If it's abort, we undo the transaction
+    \item
+        \begin{itemize}
+            \item Single master
+                \begin{itemize}
+                    \item Asynchronus approach has better availability because it does not need to update all replicas
+                        together at the same time
+                    \item Asynchronus approach has worse consistency because when the master of asynchronous approach
+                        fails, it might lose some recent write updates which haven't be sent to replicas
+                \end{itemize}
+            \item Multi masters
+                \begin{itemize}
+                    \item Has the same better availability as an asynchronus approach, also allows more than one
+                        transactions to run together.
+                    \item Asynchronus approach may introduce conflicts when different transactions write to different
+                        values of the same object on multiple replicas. Need conflicts detection and resolution.
+                \end{itemize}
+        \end{itemize}
 \end{enumerate}
 \end{document}
