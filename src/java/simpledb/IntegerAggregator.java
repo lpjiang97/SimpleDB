@@ -45,6 +45,7 @@ public class IntegerAggregator implements Aggregator {
         this.groupMap = new HashMap<>();
         // can't do avg on the go -- integer division might result in bad value
         this.avgMap = new HashMap<>();
+        this.countMap = new HashMap<>();
     }
 
     /**
@@ -59,7 +60,6 @@ public class IntegerAggregator implements Aggregator {
         IntField afield = (IntField)tup.getField(this.afield);
         Field gbfield = this.gbfield == NO_GROUPING ? null : tup.getField(this.gbfield);
         int newValue = afield.getValue();
-
         if (gbfield != null && gbfield.getType() != this.gbfieldtype) {
             throw new IllegalArgumentException("Given tuple has wrong type");
         }
@@ -173,23 +173,22 @@ public class IntegerAggregator implements Aggregator {
         @Override
         public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
             Tuple rtn = new Tuple(td);
-            if (this.isAvg) {
+            if (this.isAvg || this.isSumCount) {
                 Map.Entry<Field, List<Integer>> avgOrSumCountEntry = this.avgIt.next();
                 Field avgOrSumCountField = avgOrSumCountEntry.getKey();
                 List<Integer> avgOrSumCountList = avgOrSumCountEntry.getValue();
-                int value = this.sumList(avgOrSumCountList) / avgOrSumCountList.size();
-                this.setFields(rtn, value, avgOrSumCountField);
-                return rtn;
-            } else if (this.isSumCount) {
-                Map.Entry<Field, List<Integer>> avgOrSumCountEntry = this.avgIt.next();
-                Field avgOrSumCountField = avgOrSumCountEntry.getKey();
-                List<Integer> avgOrSumCountList = avgOrSumCountEntry.getValue();
-                this.setFields(rtn, sumList(avgOrSumCountList), avgOrSumCountField);
-                if (avgOrSumCountField != null)
-                    rtn.setField(2, new IntField(avgOrSumCountList.size()));
-                else
-                    rtn.setField(1, new IntField(avgOrSumCountList.size()));
-                return rtn;
+                if (this.isAvg) {
+                    int value = this.sumList(avgOrSumCountList) / avgOrSumCountList.size();
+                    this.setFields(rtn, value, avgOrSumCountField);
+                    return rtn;
+                } else {
+                    this.setFields(rtn, sumList(avgOrSumCountList), avgOrSumCountField);
+                    if (avgOrSumCountField != null)
+                        rtn.setField(2, new IntField(avgOrSumCountList.size()));
+                    else
+                        rtn.setField(1, new IntField(avgOrSumCountList.size()));
+                    return rtn;
+                }
             } else if (this.isSCAvg) {
                 Map.Entry<Field, Integer> entry = this.it.next();
                 Field f = entry.getKey();
