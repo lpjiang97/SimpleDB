@@ -165,8 +165,6 @@ public class IntegerAggregator implements Aggregator {
         public boolean hasNext() throws DbException, TransactionAbortedException {
             if (this.isAvg || this.isSumCount)
                 return avgIt.hasNext();
-            else if (this.isSCAvg)
-                return avgIt.hasNext() && super.hasNext();
             return super.hasNext();
         }
 
