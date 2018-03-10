@@ -18,6 +18,7 @@ public class Aggregate extends Operator {
 
     private Aggregator aggregator;
     private OpIterator it;
+    private TupleDesc td;
     /**
      * Constructor.
      * 
@@ -43,11 +44,29 @@ public class Aggregate extends Operator {
         this.aop = aop;
         // get type of aggregate field
         Type gfieldtype = gfield == -1 ? null : this.child.getTupleDesc().getFieldType(this.gfield);
-        if (this.child.getTupleDesc().getFieldType(this.afield).equals(Type.STRING_TYPE))
+
+        if (this.child.getTupleDesc().getFieldType(this.afield) == (Type.STRING_TYPE)) {
             this.aggregator = new StringAggregator(this.gfield, gfieldtype, this.afield, this.aop);
+        }
         else
             this.aggregator = new IntegerAggregator(this.gfield, gfieldtype, this.afield, this.aop);
         this.it = this.aggregator.iterator();
+        // create tupleDesc for agg
+        List<Type> types = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        // group field
+        if (gfieldtype != null) {
+            types.add(gfieldtype);
+            names.add(this.child.getTupleDesc().getFieldName(this.gfield));
+        }
+        types.add(this.child.getTupleDesc().getFieldType(this.afield));
+        names.add(this.child.getTupleDesc().getFieldName(this.afield));
+        if (aop.equals(Aggregator.Op.SUM_COUNT)) {
+            types.add(Type.INT_TYPE);
+            names.add("COUNT");
+        }
+        assert (types.size() == names.size());
+        this.td = new TupleDesc(types.toArray(new Type[types.size()]), names.toArray(new String[names.size()]));
     }
 
     /**
@@ -65,7 +84,7 @@ public class Aggregate extends Operator {
      *         null;
      * */
     public String groupFieldName() {
-        return this.child.getTupleDesc().getFieldName(this.gfield);
+        return this.td.getFieldName(0);
     }
 
     /**
@@ -80,7 +99,10 @@ public class Aggregate extends Operator {
      *         tuples
      * */
     public String aggregateFieldName() {
-        return this.child.getTupleDesc().getFieldName(this.afield);
+        if (this.gfield == -1)
+            return this.td.getFieldName(0);
+        else
+            return this.td.getFieldName(1);
     }
 
     /**
@@ -133,7 +155,7 @@ public class Aggregate extends Operator {
      * iterator.
      */
     public TupleDesc getTupleDesc() {
-        return this.child.getTupleDesc();
+        return this.td;
     }
 
     public void close() {
@@ -150,6 +172,22 @@ public class Aggregate extends Operator {
     @Override
     public void setChildren(OpIterator[] children) {
         this.child = children[0];
+        List<Type> types = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        Type gfieldtype = gfield == -1 ? null : this.child.getTupleDesc().getFieldType(this.gfield);
+        // group field
+        if (gfieldtype != null) {
+            types.add(gfieldtype);
+            names.add(this.child.getTupleDesc().getFieldName(this.gfield));
+        }
+        types.add(this.child.getTupleDesc().getFieldType(this.afield));
+        names.add(this.child.getTupleDesc().getFieldName(this.afield));
+        if (aop.equals(Aggregator.Op.SUM_COUNT)) {
+            types.add(Type.INT_TYPE);
+            names.add("COUNT");
+        }
+        assert (types.size() == names.size());
+        this.td = new TupleDesc(types.toArray(new Type[types.size()]), names.toArray(new String[names.size()]));
     }
     
 }

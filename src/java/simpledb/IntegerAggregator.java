@@ -15,9 +15,11 @@ public class IntegerAggregator implements Aggregator {
     private Type gbfieldtype;
     private int afield;
     private Op what;
-
+    // running sum/min/max/count
     private Map<Field, Integer> groupMap;
-    // only used for AVG aggregate
+    // only for summing up the count in SC_AVG
+    private Map<Field, Integer> countMap;
+    // only used for AVG/SUM_COUNT aggregate
     private Map<Field, List<Integer>> avgMap;
 
     /**
@@ -87,6 +89,21 @@ public class IntegerAggregator implements Aggregator {
                 else
                     this.groupMap.put(gbfield, this.groupMap.get(gbfield) + 1);
                 break;
+            case SC_AVG:
+                IntField countField = null;
+                if (gbfield == null)
+                    countField = (IntField)tup.getField(1);
+                else
+                    countField = (IntField)tup.getField(2);
+                int countValue = countField.getValue();
+                if (!this.groupMap.containsKey(gbfield)) {
+                    this.groupMap.put(gbfield, newValue);
+                    this.countMap.put(gbfield, countValue);
+                } else {
+                    this.groupMap.put(gbfield, this.groupMap.get(gbfield) + newValue);
+                    this.countMap.put(gbfield, this.countMap.get(gbfield) + countValue);
+                }
+            case SUM_COUNT:
             case AVG:
                 if (!this.avgMap.containsKey(gbfield)) {
                     List<Integer> l = new ArrayList<>();
@@ -120,47 +137,72 @@ public class IntegerAggregator implements Aggregator {
 
         private Iterator<Map.Entry<Field, List<Integer>>> avgIt;
         private boolean isAvg;
+        private boolean isSCAvg;
+        private boolean isSumCount;
 
         IntAggIterator() {
             super(groupMap, gbfieldtype);
-            this.isAvg = (what.equals(Op.AVG));
+            this.isAvg = what.equals(Op.AVG);
+            this.isSCAvg = what.equals(Op.SC_AVG);
+            this.isSumCount = what.equals(Op.SUM_COUNT);
+            if (isSumCount) {
+                this.td = new TupleDesc(new Type[] {this.itgbfieldtype, Type.INT_TYPE, Type.INT_TYPE},
+                        new String[] {"groupVal", "sumVal", "countVal"});
+            }
         }
 
         @Override
         public void open() throws DbException, TransactionAbortedException {
             super.open();
-            if (this.isAvg)
+            if (this.isAvg || this.isSumCount)
                 this.avgIt = avgMap.entrySet().iterator();
-            else
+            else {
                 this.avgIt = null;
+            }
         }
 
         @Override
         public boolean hasNext() throws DbException, TransactionAbortedException {
-            if (this.isAvg)
+            if (this.isAvg || this.isSumCount)
                 return avgIt.hasNext();
+            else if (this.isSCAvg)
+                return avgIt.hasNext() && super.hasNext();
             return super.hasNext();
         }
 
         @Override
         public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
+            Tuple rtn = new Tuple(td);
             if (this.isAvg) {
-                Map.Entry<Field, List<Integer>> entry = this.avgIt.next();
-                Field f = entry.getKey();
-                List<Integer> l = entry.getValue();
-                int value = this.sumList(l) / l.size();
-                Tuple rtn = new Tuple(td);
-                this.setFields(rtn, f == null, value, f);
+                Map.Entry<Field, List<Integer>> avgOrSumCountEntry = this.avgIt.next();
+                Field avgOrSumCountField = avgOrSumCountEntry.getKey();
+                List<Integer> avgOrSumCountList = avgOrSumCountEntry.getValue();
+                int value = this.sumList(avgOrSumCountList) / avgOrSumCountList.size();
+                this.setFields(rtn, value, avgOrSumCountField);
                 return rtn;
-            } else {
-                return super.next();
+            } else if (this.isSumCount) {
+                Map.Entry<Field, List<Integer>> avgOrSumCountEntry = this.avgIt.next();
+                Field avgOrSumCountField = avgOrSumCountEntry.getKey();
+                List<Integer> avgOrSumCountList = avgOrSumCountEntry.getValue();
+                this.setFields(rtn, sumList(avgOrSumCountList), avgOrSumCountField);
+                if (avgOrSumCountField != null)
+                    rtn.setField(2, new IntField(avgOrSumCountList.size()));
+                else
+                    rtn.setField(1, new IntField(avgOrSumCountList.size()));
+                return rtn;
+            } else if (this.isSCAvg) {
+                Map.Entry<Field, Integer> entry = this.it.next();
+                Field f = entry.getKey();
+                this.setFields(rtn, entry.getValue() / countMap.get(f), f);
+                return rtn;
             }
+            return super.next();
         }
 
         @Override
         public void rewind() throws DbException, TransactionAbortedException {
             super.rewind();
-            if (this.isAvg)
+            if (this.isAvg || this.isSumCount)
                 this.avgIt = avgMap.entrySet().iterator();
         }
 

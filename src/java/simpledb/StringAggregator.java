@@ -70,26 +70,26 @@ public class StringAggregator implements Aggregator {
 
 class AggregateIterator implements OpIterator {
 
-    private Iterator<Map.Entry<Field, Integer>> it;
+    protected Iterator<Map.Entry<Field, Integer>> it;
     TupleDesc td;
 
     private Map<Field, Integer> groupMap;
-    private Type gbfieldtype;
+    protected Type itgbfieldtype;
 
     public AggregateIterator(Map<Field, Integer> groupMap, Type gbfieldtype) {
         this.groupMap = groupMap;
-        this.gbfieldtype = gbfieldtype;
+        this.itgbfieldtype = gbfieldtype;
+        // no grouping
+        if (this.itgbfieldtype == null)
+            this.td = new TupleDesc(new Type[] {Type.INT_TYPE}, new String[] {"aggregateVal"});
+        else
+            this.td = new TupleDesc(new Type[] {this.itgbfieldtype, Type.INT_TYPE}, new String[] {"groupVal", "aggregateVal"});
     }
 
 
     @Override
     public void open() throws DbException, TransactionAbortedException {
         this.it = groupMap.entrySet().iterator();
-        // no grouping
-        if (this.gbfieldtype == null)
-            this.td = new TupleDesc(new Type[] {Type.INT_TYPE}, new String[] {"aggregateVal"});
-        else
-            this.td = new TupleDesc(new Type[] {this.gbfieldtype, Type.INT_TYPE}, new String[] {"groupVal", "aggregateVal"});
     }
 
     @Override
@@ -99,11 +99,10 @@ class AggregateIterator implements OpIterator {
 
     @Override
     public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-        int value = 0;
         Map.Entry<Field, Integer> entry = this.it.next();
         Field f = entry.getKey();
         Tuple rtn = new Tuple(this.td);
-        this.setFields(rtn, f == null, entry.getValue(), f);
+        this.setFields(rtn, entry.getValue(), f);
         return rtn;
     }
 
@@ -123,8 +122,8 @@ class AggregateIterator implements OpIterator {
         this.td = null;
     }
 
-    void setFields(Tuple rtn, boolean noGroup, int value, Field f) {
-        if (noGroup) {
+    void setFields(Tuple rtn, int value, Field f) {
+        if (f == null) {
             rtn.setField(0, new IntField(value));
         } else {
             rtn.setField(0, f);
