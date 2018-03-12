@@ -1,0 +1,50 @@
+\documentclass[10pt]{myland}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE TITLE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\begin{center}
+	{\Large \myhwname{CSE 444: Lab 6 Writeup}} \\
+	\vspace{.05in}
+    \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
+	\vspace{.05in}
+    \today \\
+\end{center}
+\vspace{.15in} \hrule \vspace{0.5em}%
+
+
+\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=2em]
+	\item
+	Lab 4 focuses on adding rollback and recovery functionality to simpleDB upon abort and system crash. Specifically,
+    we implemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction hasn't commited
+    yet), and NO FORCE (on transaction commit, no need to force write dirty pages to disk) for buffer pool management.
+    In order to achieve this, we implemented log-based rollback and recovery which performs a redo-phase and an undo-phase
+
+    Main parts of lab4 include:
+	\begin{itemize}
+        \item \texttt{LogFile.rollback}: We need this method to roll back changes made by an aborted transaction. This
+        methdo will read from the end of the log file and undo changes made by this transaction until its first active
+        log record. It is also implemented that undo changes will append new CLR logs. More of this in the design part
+        of this writeup.
+
+        \item \texttt{LogFile.recover}: We need this method to recover a simpleDB system upon unexpected crashes. It
+        will start redoing from the beginning of the log file or the last checkpoint log if any, during which a map of
+        active transactions to their first active log line is built. Then, undo-phase will use the active transaction
+        map and undo any changes made by these transactions bottom up.
+	\end{itemize}
+
+    \item I suggest adding a new unit test for the correctness of how \texttt{setBeforeImage()} is used in \texttt{BufferPool}.
+    When the transaction commits, there is a good chance that some pages which were dirty have been flushed to disk and
+    are not dirty anymore. However, the before image of a page should be set if it was ever dirtied by this transaction.
+    So the \texttt{setBeforeImage()} should be called on any pages which \texttt{LockManager} holds a lock on.
+
+    \item Design decisions:
+        I decided to add new type of log into LogFile, CLR. CLR logs can significantly help undo phase to \emph{skip}
+    any CLR records made by rollback actions. CLR has type \texttt{INT = 6}, and has the exact same format has UPDATE
+    records. CLR records are appended during rollback actions and undo actions.
+
+    \item Changes to API: I added a new CLR log as a sixth type.
+
+    \item Missing elements: I believe I finished the entire Lab 4.
+
+\end{enumerate}
+\end{document}
