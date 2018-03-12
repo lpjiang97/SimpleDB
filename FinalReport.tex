@@ -1,9 +1,9 @@
-\documentclass[10pt]{myland}
+\documentclass[12pt]{myland}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE TITLE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 \begin{center}
-	{\Large \myhwname{CSE 444: Lab 6 Writeup}} \\
+	{\Large \myhwname{CSE 444: \texttt{SimpleDB} Final Report}} \\
 	\vspace{.05in}
     \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
 	\vspace{.05in}
@@ -11,40 +11,83 @@
 \end{center}
 \vspace{.15in} \hrule \vspace{0.5em}%
 
+\section{Overall System Architecture}
+	\label{overview}
 
-\begin{enumerate}[label=\textbf{\arabic*.}, listparindent=0.0em, itemsep=2em]
-	\item
-	Lab 4 focuses on adding rollback and recovery functionality to simpleDB upon abort and system crash. Specifically,
-    we implemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction hasn't commited
-    yet), and NO FORCE (on transaction commit, no need to force write dirty pages to disk) for buffer pool management.
-    In order to achieve this, we implemented log-based rollback and recovery which performs a redo-phase and an undo-phase
+	\par In a typical database architecture, there are four main components: Process Manager, Query Executor, Share
+Utilities, and Storage Manger (Balazinska, Mass, Lecture 3). For our implementation of \texttt{SimpleDB} in the labs,
+we focus on the Storage Manager and Query Executor: adding access methods for data store on disk in lab1, adding both file
+mutability (insert/delete tuples to/from file system, eviction from full BufferPool) and query operators (SeqScan, Join,
+etc.) \& aggregates (min, max, etc.) in lab2, adding lock manager in lab3, adding log manager in lab4, and finally, adding
+parallel data processing in lab6.
 
-    Main parts of lab4 include:
-	\begin{itemize}
-        \item \texttt{LogFile.rollback}: We need this method to roll back changes made by an aborted transaction. This
-        methdo will read from the end of the log file and undo changes made by this transaction until its first active
-        log record. It is also implemented that undo changes will append new CLR logs. More of this in the design part
-        of this writeup.
+    Figure \ref{fig:architecture} shows the parts architecture of \texttt{SimpleDB} which we implemented in the labs.
+    \begin{figure}[h]
+    \begin{tikzpicture}[
+            >=latex,shorten >=2pt,shorten <=2pt,shape aspect=1,
+        ]
+            \tikzstyle{cyl} = [cylinder, shape border rotate=90, draw, minimum height=1cm, minimum width=5cm]
+            \tikzstyle{noo} = [rectangle, draw, minimum height=1cm, minimum width=5cm]
+            \tikzstyle{cir} = [ellipse, draw, minimum height=1cm, minimum width=2cm]
+            \tikzstyle{poi} = [ellipse, draw, fill]
+            \tikzstyle{joining} = []
+            \tikzset{>=stealth}
+            \tikzstyle{readup} = [red, ->]
+            \tikzstyle{comm} = [blue, ->]
+        % Disk Interface %
+        \node[noo, minimum height = 8cm, minimum width = 6cm, dashed] (diski) at (-10, 2) {};
+            \node at ($(diski) + (0, 4)$) {Disk Interface};
+        \node[cyl] (disk) at (-10, 0) {Disk};
+        \node[noo, minimum height=0.5cm, minimum width=1cm] (diskpage) at (-10, 0.8) {\texttt{File f}};
+        \node (diskpage1) at (diskpage.north east) {};
+        \node (diskpage2) at (diskpage.north west) {};
+        % Heapfile
+        \node[noo, minimum height=3cm, minimum width=5cm] (heapfile) at (-10, 3.7) {};
+            \node at (heapfile.north) {HeapFile};
+        \node (heapfile1) at (heapfile.south east) {};
+        \node (heapfile2) at (heapfile.south west) {};
+        \path[->] (diskpage1) edge (heapfile1);
+        \path[->] (diskpage2) edge (heapfile2);
+        % Heappage
+        \node[noo, minimum height=1.5cm, minimum width=1cm] (heappage) at (-12, 3.2) {};
+        \node[noo, minimum height=1.5cm, minimum width=1cm] (heappage2) at (-11, 3.2) {};
+            \node at ($(heappage2.north) + (-0.5, 0)$) {\small{HeapPage}};
+            \node at ($(heappage2) + (1, 0)$) {...};
+        % Tuple
+        \node[noo, minimum height=.1cm, minimum width=.2cm] (tuple1) at (-12.35, 3) {};
+        \node[noo, minimum height=.1cm, minimum width=.2cm] (tuple2) at (-12.15, 3) {};
+        \node[noo, minimum height=.1cm, minimum width=.2cm] (tuple3) at (-11.95, 3) {};
+            \node at (-12.15, 3.5) {\small{Tuple}};
+            \node at (-11.75, 3) {...};
+        \node (meta) at ($(heapfile)+ (0.5, 0)$) {metadata};
 
-        \item \texttt{LogFile.recover}: We need this method to recover a simpleDB system upon unexpected crashes. It
-        will start redoing from the beginning of the log file or the last checkpoint log if any, during which a map of
-        active transactions to their first active log line is built. Then, undo-phase will use the active transaction
-        map and undo any changes made by these transactions bottom up.
-	\end{itemize}
+        % Execution Interface
+        \node[noo, minimum height=3cm, minimum width=2cm] (buffer) at ($(heapfile) + (6, -3)$) {BufferPool};
+        \node[noo, minimum height=1cm, minimum width=2cm] (lock) at ($(buffer)+ (0, 4.5)$) {Lock Manager};
+        \node[noo, minimum height=1cm, minimum width=2cm] (log) at ($(lock)+ (0, -1.5)$) {Log Manager};
+        \node[noo, minimum height=1.5cm, minimum width=2cm] (catalog) at ($(buffer)+ (0, -3)$) {Catalog};
+        \node[noo, minimum height=10cm, minimum width=4cm, dashed] (storage) at ($(buffer)+ (0, 0.5)$) {};
+            \node at ($(storage) + (0, 5)$) {Storage Manager};
+        % Executor
+        \node[noo, minimum height=4.5cm, minimum width=5.5cm, dashed] (exec) at ($(log) + (6, 0.6)$) {};
+        \node[noo, minimum height=1cm, minimum width=2cm] (it) at ($(log) + (5, -1)$) {\small{IteratorInterface}};
+            \node at ($(it) + (1, -1)$)  {\small{Query Executor}};
+        \node (it1) at ($(it) + (3, 1)$) {\tiny{SeqScan}};
+        \node (it2) at ($(it1) + (0, 0.5)$) {\tiny{Join}};
+        \node (it3) at ($(it2) + (0, 0.5)$) {\tiny{Filter}};
+        \node (it4) at ($(it3) + (0, 0.5)$) {\tiny{Aggregates}};
+        \node (it5) at ($(it4) + (0, 0.5)$) {\tiny{...}};
+        \foreach \x in {1, 2, 3, 4, 5} {
+            \path[->] (it) edge [bend left = \x0] (it\x);
+        }
+    \end{tikzpicture}
+    \caption{\texttt{SimpleDB} Architecture}
+        \label{fig:architecture}
+    \end{figure}
 
-    \item I suggest adding a new unit test for the correctness of how \texttt{setBeforeImage()} is used in \texttt{BufferPool}.
-    When the transaction commits, there is a good chance that some pages which were dirty have been flushed to disk and
-    are not dirty anymore. However, the before image of a page should be set if it was ever dirtied by this transaction.
-    So the \texttt{setBeforeImage()} should be called on any pages which \texttt{LockManager} holds a lock on.
+\section{Parallel Data Processing}
+	\label{parallel}
 
-    \item Design decisions:
-        I decided to add new type of log into LogFile, CLR. CLR logs can significantly help undo phase to \emph{skip}
-    any CLR records made by rollback actions. CLR has type \texttt{INT = 6}, and has the exact same format has UPDATE
-    records. CLR records are appended during rollback actions and undo actions.
-
-    \item Changes to API: I added a new CLR log as a sixth type.
-
-    \item Missing elements: I believe I finished the entire Lab 4.
-
-\end{enumerate}
+\section{Discussion}
+	\label{discussion}
 \end{document}
