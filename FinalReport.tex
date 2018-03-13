@@ -27,7 +27,8 @@ parallel data processing in lab6.
 
     Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which we implemented in the labs.
     \begin{figure}[h]
-    \begin{tikzpicture}[
+        \begin{mybox}
+            \begin{tikzpicture}[
             >=latex,shorten >=2pt,shorten <=2pt,shape aspect=1,
         ]
             \tikzstyle{cyl} = [cylinder, shape border rotate=90, draw, minimum height=1cm, minimum width=5cm]
@@ -73,8 +74,8 @@ parallel data processing in lab6.
         \node[noo, minimum height=10cm, minimum width=4cm, dashed] (storage) at ($(buffer)+ (0, 0.5)$) {};
             \node at ($(storage) + (0, 5)$) {Storage Manager};
         % Executor
-        \node[noo, minimum height=4.5cm, minimum width=5.5cm, dashed] (exec) at ($(log) + (6, 0.6)$) {};
-        \node[noo, minimum height=1cm, minimum width=2cm] (it) at ($(log) + (5, -1)$) {\small{IteratorInterface}};
+        \node[noo, minimum height=4.5cm, minimum width=5.5cm, dashed] (exec) at ($(log) + (5, 0.6)$) {};
+        \node[noo, minimum height=1cm, minimum width=2cm] (it) at ($(log) + (4, -1)$) {\small{IteratorInterface}};
             \node at ($(it) + (1, -1)$)  {\small{Query Executor}};
         \node (it1) at ($(it) + (3, 1)$) {\tiny{SeqScan}};
         \node (it2) at ($(it1) + (0, 0.5)$) {\tiny{Join}};
@@ -85,7 +86,9 @@ parallel data processing in lab6.
             \path[->] (it) edge [bend left = \x0] (it\x);
         }
     \end{tikzpicture}
-    \caption{\<SimpleDB> Architecture}
+
+        \end{mybox}
+       \caption{\<SimpleDB> Architecture}
         \label{fig:architecture}
     \end{figure}
 
@@ -128,7 +131,7 @@ parallel data processing in lab6.
             \node (name) at (3, 4.5) {EXAMPLE};
             \path[->] (6, 3) edge node[midway, right] {\texttt{Name}} (name);
         \end{tikzpicture}
-        \caption{\<SimpleDB> \texttt{open()}}
+        \caption{\<SimpleDB> \texttt{open}}
         \label{fig:open}
     \end{figure}
 
@@ -161,7 +164,7 @@ parallel data processing in lab6.
             \node (name) at (3, 4.5) {EXAMPLE};
             \path[->] (6, 3) edge node[midway, right] {\texttt{Name}} (name);
         \end{tikzpicture}
-        \caption{\texttt{SimpleDB} \texttt{next()}}
+        \caption{\texttt{SimpleDB} \texttt{next}}
         \label{fig:next}
     \end{figure}
         In Lab 1, we implemented \<getPage> which is needed for reading Pages into memory and getting tuples,
