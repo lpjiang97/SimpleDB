@@ -1,9 +1,13 @@
 \documentclass[12pt]{myland}
 
+%%% Formatting
+\def\<#1>{\texttt{#1}}
+\setlength{\parskip}{2em}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE TITLE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 \begin{center}
-	{\Large \myhwname{CSE 444: \texttt{SimpleDB} Final Report}} \\
+	{\Large \myhwname{CSE 444: \<SimpleDB> Final Report}} \\
 	\vspace{.05in}
     \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
 	\vspace{.05in}
@@ -15,13 +19,13 @@
 	\label{overview}
 
 	\par In a typical database architecture, there are four main components: Process Manager, Query Executor, Share
-Utilities, and Storage Manger (Balazinska, Mass, Lecture 3). For our implementation of \texttt{SimpleDB} in the labs,
+Utilities, and Storage Manger (Balazinska, Mass, Lecture 3). For our implementation of \<SimpleDB> in the labs,
 we focus on the Storage Manager and Query Executor: adding access methods for data store on disk in lab1, adding both file
 mutability (insert/delete tuples to/from file system, eviction from full BufferPool) and query operators (SeqScan, Join,
 etc.) \& aggregates (min, max, etc.) in lab2, adding lock manager in lab3, adding log manager in lab4, and finally, adding
 parallel data processing in lab6.
 
-    Figure \ref{fig:architecture} shows the parts architecture of \texttt{SimpleDB} which we implemented in the labs.
+    Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which we implemented in the labs.
     \begin{figure}[h]
     \begin{tikzpicture}[
             >=latex,shorten >=2pt,shorten <=2pt,shape aspect=1,
@@ -36,9 +40,9 @@ parallel data processing in lab6.
             \tikzstyle{comm} = [blue, ->]
         % Disk Interface %
         \node[noo, minimum height = 8cm, minimum width = 6cm, dashed] (diski) at (-10, 2) {};
-            \node at ($(diski) + (0, 4)$) {Disk Interface};
+            \node at ($(diski) + (0, 4)$) {Disk Inerface};
         \node[cyl] (disk) at (-10, 0) {Disk};
-        \node[noo, minimum height=0.5cm, minimum width=1cm] (diskpage) at (-10, 0.8) {\texttt{File f}};
+        \node[noo, minimum height=0.5cm, minimum width=1cm] (diskpage) at (-10, 0.8) {\<File f>};
         \node (diskpage1) at (diskpage.north east) {};
         \node (diskpage2) at (diskpage.north west) {};
         % Heapfile
@@ -81,8 +85,142 @@ parallel data processing in lab6.
             \path[->] (it) edge [bend left = \x0] (it\x);
         }
     \end{tikzpicture}
-    \caption{\texttt{SimpleDB} Architecture}
+    \caption{\<SimpleDB> Architecture}
         \label{fig:architecture}
+    \end{figure}
+
+    \subsection{\<BufferPool> and \<Opertors>}
+        BufferPool is responsible for both caching pages in memory that have been recently read
+        from disk and handle concurrency and transactions. All operators read and write pages from various files
+        on disk through the buffer pool. Operators are responsible for executing query plans. In \<SimpleDB>, each operator
+        implements the \<OpIterator> interface, which supports \<open, hasNext, next, rewind, > and
+        \<close>. Operators are connected together into a plan by passing lower-level operators into the
+        constructors of higher-level operators (Lab1 ReadMe). Programs call \<next> on the root operator and then
+        fetch tuples recursively through the plan tree in one pass top-down and another pass bottom-up. \par
+
+
+    \begin{figure}[t!]
+        \begin{tikzpicture}[
+            scale=.6,
+        ]
+            \path[->, thick] (-3, -0.5) edge node[midway, above] {start} (0, -0.5);
+            \draw[draw=black] (0, 0) rectangle (3, -1) node[midway]  {\texttt{SeqScan}};
+            \node (seq) at (3, -0.5) {};
+            \draw[draw=black] (6, 0) rectangle (9, -1) node[midway] {\texttt{HeapFile}};
+            \node (heapfilel) at (6, -0.5) {};
+            \node (heapfiler) at (9, -0.5) {};
+            \path[->] (seq) edge node[midway, above] {\texttt{open}} (heapfilel);
+            \draw[draw=black] (12, 0) rectangle (21, -1) node[midway] {\texttt{HeapPage(with Tuples)}};
+            \node (pagel) at (12, -0.5) {};
+            \node (pager) at (21, -0.5) {};
+            \node (pageu) at (16.5, 0) {};
+            \node (paged) at (16.5, -1) {};
+            \path[->] (heapfiler) edge node[midway, above] {\texttt{open}} (pagel);
+            \draw[draw=black] (15, 5) rectangle (18, 4) node[midway] {\texttt{Disk}};
+            \node (disk) at (16.5, 4) {};
+            \path[->] (disk) edge node[midway, left] {\texttt{readPage}} (pageu);
+            \draw[draw=black] (14.5, -5) rectangle (18.5, -4) node[midway] {\texttt{BufferPool}};
+            \node (buffer) at (16.5, -4) {};
+            \path[->] (buffer) edge node[midway, left] {\texttt{cache page}} (paged);
+            % catalog
+            \draw[draw=black] (6, 3) rectangle (9, 2) node[midway] {\texttt{Catalog}};
+            \path[->] (7.5, 2) edge node[midway, left] {\texttt{DbFile}} (7.5, 0);
+            \node (name) at (3, 4.5) {EXAMPLE};
+            \path[->] (6, 3) edge node[midway, right] {\texttt{Name}} (name);
+        \end{tikzpicture}
+        \caption{\<SimpleDB> \texttt{open()}}
+        \label{fig:open}
+    \end{figure}
+
+    \begin{figure}[h!]
+        \begin{tikzpicture}[
+            scale=.6,
+        ]
+            \path[->, thick] (-3, -0.5) edge node[midway, above] {start} (0, -0.5);
+            \draw[draw=black] (0, 0) rectangle (3, -1) node[midway]  {\texttt{SeqScan}};
+            \node (seq) at (3, -0.5) {};
+            \draw[draw=black] (6, 0) rectangle (9, -1) node[midway] {\texttt{HeapFile}};
+            \node (heapfilel) at (6, -0.5) {};
+            \node (heapfiler) at (9, -0.5) {};
+            \path[->] (seq) edge node[midway, above] {\texttt{next}} (heapfilel);
+            \draw[draw=black] (12, 0) rectangle (21, -1) node[midway] {\texttt{HeapPage(with Tuples)}};
+            \node (pagel) at (12, -0.5) {};
+            \node (pager) at (21, -0.5) {};
+            \node (pageu) at (16.5, 0) {};
+            \node (paged) at (16.5, -1) {};
+            \path[->] (heapfiler) edge node[midway, above] {\texttt{next}} (pagel);
+            \draw[draw=black] (15, 5) rectangle (18, 4) node[midway] {\texttt{Disk}};
+            \node (disk) at (16.5, 4) {};
+            \draw[draw=black] (14.5, -5) rectangle (18.5, -4) node[midway] {\texttt{BufferPool}};
+            \node (buffer) at (16.5, -4) {};
+            \path[->] (buffer) edge node[midway, left] {\texttt{read tuple}} (paged);
+            \path[->] (pageu) edge [bend right] node[midway, above] {\texttt{return tuple}} (7.5, 0) ;
+            \path[->] (7.5, -1) edge [bend left] node[midway, below] {\texttt{return tuple}} (1.5, -1) ;
+            \draw[draw=black] (6, 3) rectangle (9, 2) node[midway] {\texttt{Catalog}};
+            \path[->] (7.5, 2) edge node[midway, left] {\texttt{DbFile}} (7.5, 0);
+            \node (name) at (3, 4.5) {EXAMPLE};
+            \path[->] (6, 3) edge node[midway, right] {\texttt{Name}} (name);
+        \end{tikzpicture}
+        \caption{\texttt{SimpleDB} \texttt{next()}}
+        \label{fig:next}
+    \end{figure}
+        In Lab 1, we implemented \<getPage> which is needed for reading Pages into memory and getting tuples,
+        together with \<SeqScan> operator to scan the file and return tuples. The workflow of opening opertators
+        to read file and caching pages into BufferPool is shown by Figure \ref{fig:open}, and the workflow of recursively
+        getting tuples through \<SeqScan> using \<next()> is shown by Figure \ref{fig:next}. \par
+
+        In Lab 2, We added \<insert>, \<delete> funcionalities in \<SimpleDB>, which insert/delete tuples to/from the
+        pages in BufferPool by calling the method from \<HeapFile> to update the page, then \<BufferPool>
+        updates the records by re-inserting the pages into the \<BufferPool>. When the \<BufferPool> is
+        full and a new page need adding, \<writePage> from \<HeapFile> will be called to write the dirty
+        page to disk and add the new page into the \<BufferPool>. \<BufferPool> is in charge of updating
+        the pages because \<Insert/Delete> operators directly call \<insert/delete> of \<BufferPool>. Besides, we also
+        implemented \<Filter>, \<Join> operators and the aggregates. As an example, Figure \ref{fig:join} shows the
+        workflow of using \<Join> opeator and Figure \ref{fig:insert} shows the workflow of inserting tuples.
+    \begin{figure}[t!]
+        \begin{tikzpicture}[
+            scale=.5,
+        ]
+            \path[->, thick] (3, 3) edge node[midway, above] {...(father opertor \texttt{next})} (3, 0);
+            \draw[draw=black] (1.5, 0) rectangle (4.5, -1) node[midway]  {\texttt{Join}};
+            \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child1.next()}} (-2, -2.5);
+            \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child2.next()}} (8, -2.5);
+            \draw[draw=black] (-5.5, -2.5) rectangle (1.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
+            \draw[draw=black] (4.5, -2.5) rectangle (11.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
+            \path[->, thick] (-2, -3.5) edge node[midway, above] {} (3, -4.5);
+            \path[->, thick] (8, -3.5) edge node[midway, above] {} (3, -4.5);
+            \draw[draw=black] (0.5, -4.5) rectangle (5.5, -5.5) node[midway]  {\texttt{JoinPredicte}};
+            \path[->, thick] (3, -5.5) edge node[midway] {\texttt{JoinPredicate.filter}} (3, -7.5);
+            \draw[draw=black] (0.5, -7.5) rectangle (5.5, -8.5) node[midway]  {\texttt{Return Tuple}};
+            \node (father) at (-6.5, 3) {};
+            \path[->, thick, color=red] (0.5, -8.5) edge [bend left=30] node[midway, rotate=330] {return to father \texttt{next} call} (father);
+        \end{tikzpicture}
+        \caption{\<SimpleDB join>}
+        \label{fig:join}
+    \end{figure}
+
+    \begin{figure}[t!]
+        \begin{tikzpicture}[
+            scale=.6,
+        ]
+            \path[->, thick] (0, 2) edge node[midway, above] {\texttt{insert}} (0, 0);
+            \draw[draw=black] (-1.5, 0) rectangle (1.5, -1) node[midway]  {\texttt{BufferPool}};
+            \path[->, thick] (0, -1) edge node[midway, above] {\texttt{insert}} (0, -3);
+            \draw[draw=black] (-1.5, -3) rectangle (1.5, -4) node[midway]  {\texttt{HeapFile}};
+            \path[->, thick] (0, -4) edge node[midway, above] {\texttt{insert}} (0, -6);
+            \draw[draw=black] (-3, -6) rectangle (3, -7) node[midway]  {\texttt{Page in BufferPool?}};
+            \path[->, thick] (0, -7) edge node[midway, above] {\texttt{yes}} (-3, -9);
+            \path[->, thick] (0, -7) edge node[midway, above] {\texttt{no}} (6, -9);
+            \draw[draw=black] (-5, -9) rectangle (-1, -10) node[midway]  {\texttt{Return Page}};
+            \draw[draw=black] (-0.5, -9) rectangle (15, -10) node[midway]  {\texttt{pull a new page (evict if needed)}};
+            \path[->, thick] (-3.5, -10) edge node[midway, above] {\texttt{insertTuple}} (0, -12);
+            \path[->, thick] (7, -10) edge node[midway, above] {\texttt{insertTuple}} (0, -12);
+            \draw[draw=black] (-3, -12) rectangle (3, -13) node[midway]  {updated \texttt{HeapPage}};
+            \path[->, thick, color=red] (-3, -12.5) edge [bend left=80] node[midway, rotate=80] {reinsert to \texttt{BufferPool
+                to update record}} (-1.5, -0.5);
+        \end{tikzpicture}
+        \caption{\<SimpleDB insertTuple>}
+        \label{fig:insert}
     \end{figure}
 
 \section{Parallel Data Processing}
