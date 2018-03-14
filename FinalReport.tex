@@ -2,7 +2,7 @@
 
 %%% Formatting
 \def\<#1>{\texttt{#1}}
-\setlength{\parskip}{2em}
+\setlength{\parskip}{1em}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE TITLE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -180,29 +180,37 @@ parallel data processing in lab6.
         the pages because \<Insert/Delete> operators directly call \<insert/delete> of \<BufferPool>. Besides, we also
         implemented \<Filter>, \<Join> operators and the aggregates. As an example, Figure \ref{fig:join} shows the
         workflow of using \<Join> opeator and Figure \ref{fig:insert} shows the workflow of inserting tuples.
-    \begin{figure}[t!]
-        \begin{tikzpicture}[
-            scale=.5,
-        ]
-            \path[->, thick] (3, 3) edge node[midway, above] {...(father opertor \texttt{next})} (3, 0);
-            \draw[draw=black] (1.5, 0) rectangle (4.5, -1) node[midway]  {\texttt{Join}};
-            \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child1.next()}} (-2, -2.5);
-            \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child2.next()}} (8, -2.5);
-            \draw[draw=black] (-5.5, -2.5) rectangle (1.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
-            \draw[draw=black] (4.5, -2.5) rectangle (11.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
-            \path[->, thick] (-2, -3.5) edge node[midway, above] {} (3, -4.5);
-            \path[->, thick] (8, -3.5) edge node[midway, above] {} (3, -4.5);
-            \draw[draw=black] (0.5, -4.5) rectangle (5.5, -5.5) node[midway]  {\texttt{JoinPredicte}};
-            \path[->, thick] (3, -5.5) edge node[midway] {\texttt{JoinPredicate.filter}} (3, -7.5);
-            \draw[draw=black] (0.5, -7.5) rectangle (5.5, -8.5) node[midway]  {\texttt{Return Tuple}};
-            \node (father) at (-6.5, 3) {};
-            \path[->, thick, color=red] (0.5, -8.5) edge [bend left=30] node[midway, rotate=330] {return to father \texttt{next} call} (father);
-        \end{tikzpicture}
-        \caption{\<SimpleDB join>}
-        \label{fig:join}
-    \end{figure}
 
-    \begin{figure}[t!]
+        \begin{figure}[htb!]
+            \begin{tikzpicture}[
+                scale=.5,
+            ]
+                \path[->, thick] (3, 3) edge node[midway, above] {...(father opertor \texttt{next})} (3, 0);
+                \draw[draw=black] (1.5, 0) rectangle (4.5, -1) node[midway]  {\texttt{Join}};
+                \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child1.next()}} (-2, -2.5);
+                \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child2.next()}} (8, -2.5);
+                \draw[draw=black] (-5.5, -2.5) rectangle (1.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
+                \draw[draw=black] (4.5, -2.5) rectangle (11.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
+                \path[->, thick] (-2, -3.5) edge node[midway, above] {} (3, -4.5);
+                \path[->, thick] (8, -3.5) edge node[midway, above] {} (3, -4.5);
+                \draw[draw=black] (0.5, -4.5) rectangle (5.5, -5.5) node[midway]  {\texttt{JoinPredicte}};
+                \path[->, thick] (3, -5.5) edge node[midway] {\texttt{JoinPredicate.filter}} (3, -7.5);
+                \draw[draw=black] (0.5, -7.5) rectangle (5.5, -8.5) node[midway]  {\texttt{Return Tuple}};
+                \node (father) at (-6.5, 3) {};
+                \path[->, thick, color=red] (0.5, -8.5) edge [bend left=30] node[midway, rotate=330] {return to father \texttt{next} call} (father);
+            \end{tikzpicture}
+            \caption{\<SimpleDB join>}
+            \label{fig:join}
+        \end{figure}
+
+    \subsection{Lock Manager}
+    Lab 3 focuses on adding Transactions functionality to simpleDB. In order to achieve this, we implemented our own
+    \texttt{Lock} and \texttt{LockManager} which together handle acquiring/releasing both \texttt{SHARED} (read-only)
+    and \texttt{EXCLUSIVE} (read-write) locks by different transactions on page granularity. \<SimpleDB> uses time-
+    out limits for \texttt{acquire} so that a certain period time of blocking on \texttt{acquire} will be considered as
+    deadlock and thus abort the transaction. \par
+
+    \begin{figure}[htb!]
         \begin{tikzpicture}[
             scale=.6,
         ]
@@ -226,8 +234,84 @@ parallel data processing in lab6.
         \label{fig:insert}
     \end{figure}
 
+	\begin{itemize}
+        \item \texttt{Lock}: We need this class to represent the two types of locks simpleDB uses: \texttt{SHARED} and
+            \texttt{EXCLUSIVE}. A shared lock is acquired by read-only transactions, and thus can be shared between
+            many read-only transactions; an exclusive lock is acquired by read-write transactions, and thus can only be
+            acquired by at most one read-write transaction at a time.
+        \item \texttt{LockManager}: We need this class as the manager for all locking-related actions in simpleDB. It
+            is created within \texttt{BufferPool} and will be called to acquire locks when \texttt{getPage} is called
+            and release locks when \texttt{transactionComplete} is called. Note that because of the design of simpleDB,
+            \texttt{acquire} in \texttt{LockManager} should only need calling in \texttt{getPage} when simpleDB wants to
+            interact with a page. There are a few conditions when \texttt{acquire} will not be a blocking call. They are:
+                \begin{itemize}
+                    \item When the lock on that page is not locked.
+                    \item When the lock is locked by this transaction itself (will upgrade a share lock to
+                        exclusive if this transaction is the only one which holds the lock)
+                    \item When the lock is locked, but it is a shared lock, and the transaction wants a shared lock.
+                \end{itemize}
+        \item \texttt{BufferPool.transactionComplete}: We add this method to release all locks acquired by a
+            transaction when it commits.
+	\end{itemize}
+
+    \subsection{Log Manager}
+    In Lab 4, we focus on adding rollback and recovery functionality to simpleDB upon abort and system crash.
+    Specifically, we implemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction
+    hasn't commited yet), and NO FORCE (on transaction commit, no need to force write dirty pages to disk) for buffer
+    pool management. In order to achieve this, we implemented log-based rollback and recovery which performs a
+    redo-phase and an undo-phase. \par
+
+    \<SimpleDB> supports six kinds of logs: \<BEGIN, COMMIT, ABORT, UPDATE, CHECKPOINT,> and \<CLR>. CLR is part of my
+    design in order to make undo-phase easier to implement.
+
+    \begin{itemize}
+        \item \texttt{LogFile.rollback}: We need this method to roll back changes made by an aborted transaction. This
+        methdo will read from the end of the log file and undo changes made by this transaction until its first active
+        log record. It is also implemented that undo changes will append new CLR logs. More of this in the design part
+        of this writeup.
+
+        \item \texttt{LogFile.recover}: We need this method to recover a simpleDB system upon unexpected crashes. It
+        will start redoing from the beginning of the log file or the last checkpoint log if any, during which a map of
+        active transactions to their first active log line is built. Then, undo-phase will use the active transaction
+        map and undo any changes made by these transactions bottom up.
+	\end{itemize}
+
 \section{Parallel Data Processing}
 	\label{parallel}
+
+    In Lab 6, we added the ability of parallel data processing to \<SimpleDB>. The basic structure of parallel \<SimpleDB>
+    contains \<Worker> and \<Server>. The workflow goes as follows: for every query users enter, it is first sent to
+    \<Server> for some optimization (we did not implement this part this quarter). Next step is to prepare this query to
+    be run in parallel by inserting new operators (more on this later). The this query will be sent to all
+    available workers. After each worker receives the query, it will localize it (more on this later) and run the query.
+    Finally, each worker will send the results back to \<Server>, then server will aggregate all the results and send
+    the final result back to users. \par
+
+    Our implementation of parallel \<SimpleDB> focuses on the following subparts of implementing a functional model:
+    \begin{itemize}
+        \item How to localize a query to run it on a local machine? (\<Worker.java>)
+        \item How to transfer data in between workers? (\<ShuffleProducer.java> \& \<ShuffleConsumer.java>)
+        \item How to optimize aggregate performance in a parallel setting? (\<AggreagateOptimizer.java>)
+    \end{itemize}
+    The following sections explain the detailed implementations on these questions.
+
+    \subsection{\<Worker.java>}
+    In \<Worker.java>, we localize the query for it to run on the local machine. It does three jobs: (1) For \<SeqScan>
+    operators, we reset its \<tid> and \<alias>. This is because the \<tid> of the \emph{local} table may not be the
+    same as the one of global table, and the \<Catalog> is a local verlsion. We need to update the \<tid> so that
+    \<SeqScan> reads the correct subtable; (2) For \<Producers>, we set its worker to \<this>. This is because \<Worker>
+    handles the data buffer of \<Consumers> (more on this later) and the \<Producer> needs to know which bufffer to send
+    data to for the \<Consumer> to get data; (3) For \<Consumers>, we set its data buffer in \<Worker> through its
+    \<inBuffer> map.
+
+    \subsection{\<ShuffleProducer.java> \& \<ShuffleConsumer.java>}
+    We implement \<ShuffleProducer.java> \& \<ShuffleConsumer.java> to enable data transfer between workers. In
+    \<ShuffleProducer.java>, in order to handle multiple connections with multiple \<ShuffleConsumer> (whose addresses
+    are stored in a \<SocketInfo> wrapper), we keep three lists of \<IoSession> as connections, \<List> as data buffers,
+    and \<Long> as timestamps, one combination for one \<Consumer>.
+
+
+
 
 \section{Discussion}
 	\label{discussion}
