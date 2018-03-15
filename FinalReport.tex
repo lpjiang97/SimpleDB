@@ -7,24 +7,20 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%FILE TITLE%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
-\begin{center}
-	{\Large \myhwname{CSE 444: \<SimpleDB> Final Report}} \\
-	\vspace{.05in}
-    \myname{Linxing Preston Jiang}\quad\quarter{Winter 2018}\\
-	\vspace{.05in}
-    \today \\
-\end{center}
-\vspace{.15in} \hrule \vspace{0.5em}%
+
+\title{CSE 444: \<SimpleDB> Final Report}
+\author{Linxing Preston Jiang}
+\maketitle
 
 \section{Overall System Architecture}
 	\label{overview}
 
 	\par In a typical database architecture, there are four main components: Process Manager, Query Executor, Share
-Utilities, and Storage Manger (Balazinska, Mass, Lecture 3). For our implementation of \<SimpleDB> in the labs,
+Utilities, and Storage Manger \cite{lecture3}. For our implementation of \<SimpleDB> in the labs,
 I focus on the Storage Manager and Query Executor: adding access methods for data store on disk in lab1, adding both file
 mutability (insert/delete tuples to/from file system, eviction from full BufferPool) and query operators (SeqScan, Join,
 etc.) \& aggregates (min, max, etc.) in lab2, adding lock manager in lab3, adding log manager in lab4, and finally, adding
-parallel data processing in lab6.
+parallel data processing in lab6 \cite{db}.
 
     Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which I implemented in the labs.
     \begin{figure}[h]
@@ -99,7 +95,7 @@ parallel data processing in lab6.
         on disk through the buffer pool. Operators are responsible for executing query plans. In \<SimpleDB>, each operator
         implements the \<OpIterator> interface, which supports \<open, hasNext, next, rewind, > and
         \<close>. Operators are connected together into a plan by passing lower-level operators into the
-        constructors of higher-level operators (Lab1 ReadMe). Programs call \<next> on the root operator and then
+        constructors of higher-level operators \cite{db}. Programs call \<next> on the root operator and then
         fetch tuples recursively through the plan tree in one pass top-down and another pass bottom-up. \par
 
 
@@ -197,9 +193,8 @@ parallel data processing in lab6.
                 \draw[draw=black] (-2.5, -8) rectangle (2.5, -9) node[midway]  {\texttt{JoinPredicte}};
                 \path[->, thick] (0, -9) edge node[midway] {\texttt{JoinPredicate.filter}} (0, -10.5);
                 \draw[draw=black] (-2.5, -10.5) rectangle (2.5, -11.5) node[midway]  {\texttt{Return Tuple}};
-                \node (father) at (-12, 3) {};
-                \path[->, thick, color=red] (0, -11.5) edge [bend left=30]
-                    node[midway, rotate=310] {return to father \texttt{next} call} (father);
+                \node (father) at (10, -11) {};
+                \path[->, thick, color=red] (2.5, -11) edge node[midway, above] {return to father \texttt{next} call} (father);
 
             \end{tikzpicture}
             \caption{\<SimpleDB join>}
@@ -508,7 +503,7 @@ parallel data processing in lab6.
         \label{fig:cold}
     \end{figure}
 
-    \begin{figure}[!htb]
+    \begin{figure}[!t]
         \centering
         \begin{tikzpicture}
             \begin{axis}[
@@ -539,4 +534,43 @@ parallel data processing in lab6.
 
 \section{Discussion}
 	\label{discussion}
+
+    \<SimpleDB> consists most of the modern database architecture \cite{lecture3}. However, there are a
+    few aspects in my \<SimpleDB> implementation (for simplicity) which affects the performance. Here are a few:
+    \begin{itemize}
+        \item Lack of indices: There are no index files in \<SimpleDB> architecture, which is a drastic decrease performance
+            wise, especially for databases which receive more look-up queries.
+        \item Slow join: The current implementation of join is nested-loop-join, which is the least efficient. Ideally,
+            to achieve the fastest join performance, hash-join should be used on equally join and merge-sort-join should
+            be used on inequality join.
+        \item Slow(and potentially inaccurate) deadlock detection: my current design for deadlock detection is using
+            time-out, which bascially terminates a transacation if it has not been successful on grabbing a lock for a
+            certain period of time. First, time-out is slow: if a deadlock occurs, the system will have to wait until the
+            time-out limit is reached. Second, time-out may be inaccurate: imagine a course registration database -- there
+            are centainly times when a great number of transactions want to access the same resource, so natually the
+            wait time for a single transaction would be longer. Time-out might terminate a transaction which is not deadlocked --
+            it might just be slow. This is worse when the transaction has done a lot of work before this lock. Then whole
+            work will be need to be redone. Therefore, a dependency graph would be a better choice, for many transactions
+        \item Page-granularity lock: The lock is per-\<HeapPage> for the current design. A tuple-granularity lock would
+            bring faster performance, but more complex synchronization issue and memory need.
+        \item Recovery Protocal: we did not implement ARIES \cite{lecture18}, as discussed in class.
+            Instead, current design of redoing every log is wasteful.
+    \end{itemize}
+
+
+\newpage
+\begin{thebibliography}{9}
+    \bibitem{lecture3}
+    Balazinska, Mass, Lecture 3
+    \\\texttt{https://courses.cs.washington.edu/courses/cse444/18wi/lectures/lecture03-architecture-large.pdf}
+    \bibitem{lecture18}
+    Balazinska, Mass, Lecture 18
+    \\\texttt{https://courses.cs.washington.edu/courses/cse444/18wi/lectures/lecture17-19-transactions-recovery-large.pdf}
+    \bibitem{db}
+    SimpleDB Lab ReadME
+    \\\texttt{https://gitlab.cs.washington.edu/cse444-18wi/simple-db}
+
+
+\end{thebibliography}
+
 \end{document}
