@@ -183,21 +183,23 @@ parallel data processing in lab6.
 
         \begin{figure}[htb!]
             \begin{tikzpicture}[
-                scale=.5,
+                scale=.7,
             ]
-                \path[->, thick] (3, 3) edge node[midway, above] {...(father opertor \texttt{next})} (3, 0);
-                \draw[draw=black] (1.5, 0) rectangle (4.5, -1) node[midway]  {\texttt{Join}};
-                \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child1.next()}} (-2, -2.5);
-                \path[->, thick] (3, -1) edge node[midway, above] {\texttt{child2.next()}} (8, -2.5);
-                \draw[draw=black] (-5.5, -2.5) rectangle (1.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
-                \draw[draw=black] (4.5, -2.5) rectangle (11.5, -3.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
-                \path[->, thick] (-2, -3.5) edge node[midway, above] {} (3, -4.5);
-                \path[->, thick] (8, -3.5) edge node[midway, above] {} (3, -4.5);
-                \draw[draw=black] (0.5, -4.5) rectangle (5.5, -5.5) node[midway]  {\texttt{JoinPredicte}};
-                \path[->, thick] (3, -5.5) edge node[midway] {\texttt{JoinPredicate.filter}} (3, -7.5);
-                \draw[draw=black] (0.5, -7.5) rectangle (5.5, -8.5) node[midway]  {\texttt{Return Tuple}};
-                \node (father) at (-6.5, 3) {};
-                \path[->, thick, color=red] (0.5, -8.5) edge [bend left=30] node[midway, rotate=330] {return to father \texttt{next} call} (father);
+                \path[->, thick] (0, 3) edge node[midway, above] {...(father opertor \texttt{next})} (0, 0);
+                \draw[draw=black] (-1.5, 0) rectangle (1.5, -1) node[midway]  {\texttt{Join}};
+                \path[->, thick] (0, -1) edge node[midway, above] {\texttt{child1.next()}} (-8, -4.5);
+                \path[->, thick] (0, -1) edge node[midway, above] {\texttt{child2.next()}} (8, -4.5);
+                \draw[draw=black] (-12, -4.5) rectangle (-4, -5.5) node[midway]  {\texttt{Tuple from \texttt{child1}}};
+                \draw[draw=black] (4, -4.5) rectangle (12, -5.5) node[midway]  {\texttt{Tuple from \texttt{child2}}};
+                \path[->, thick] (-8, -5.5) edge node[midway, above] {} (0, -8);
+                \path[->, thick] (8, -5.5) edge node[midway, above] {} (0, -8);
+                \draw[draw=black] (-2.5, -8) rectangle (2.5, -9) node[midway]  {\texttt{JoinPredicte}};
+                \path[->, thick] (0, -9) edge node[midway] {\texttt{JoinPredicate.filter}} (0, -10.5);
+                \draw[draw=black] (-2.5, -10.5) rectangle (2.5, -11.5) node[midway]  {\texttt{Return Tuple}};
+                \node (father) at (-12, 3) {};
+                \path[->, thick, color=red] (0, -11.5) edge [bend left=30]
+                    node[midway, rotate=310] {return to father \texttt{next} call} (father);
+
             \end{tikzpicture}
             \caption{\<SimpleDB join>}
             \label{fig:join}
@@ -306,10 +308,143 @@ parallel data processing in lab6.
 
     \subsection{\<ShuffleProducer.java> \& \<ShuffleConsumer.java>}
     We implement \<ShuffleProducer.java> \& \<ShuffleConsumer.java> to enable data transfer between workers. In
-    \<ShuffleProducer.java>, in order to handle multiple connections with multiple \<ShuffleConsumer> (whose addresses
-    are stored in a \<SocketInfo> wrapper), we keep three lists of \<IoSession> as connections, \<List> as data buffers,
-    and \<Long> as timestamps, one combination for one \<Consumer>.
+    \<ShuffleProducer.java>, we use the same protocal in \<CollectProducer> to send tuples to \<Consumer>. The difference
+    is that \<ShuffleProducer> handles multiple connections with multiple \<ShuffleConsumer> (whose addresses
+    are stored in a \<SocketInfo> wrapper), so we keep three lists of \<IoSession> as connections, \<List> as data buffers,
+    and \<Long> as timestamps, one combination for one \<Consumer>. The working thread of \<ShuffleProducer> takes
+    tuples from its child operator, and uses a \<PartitionFunction> to decide to which consumer to send this tuple. \par
 
+    In \<ShuffleConsumer>, we follow the design of \<CollectConsumer> to constantly take tuples out of the buffer (
+    populated by \<ShuffleProducer>) and returns an iterator of tuples in \texttt{fetchNext}. Together, \<ShuffleProducer>
+    and \<ShuffleConsumer> enables data transfer between \<Workers>
+
+    \subsection{\<AggregateOptimizer>}
+    In \<AggregateOptimizer.java>, we added optimization for aggregates running in parallel. The idea is that each local
+    worker could return an local aggregate result, then sent it to a \<CollectConsumer> to return a final aggregate
+    result. For each of the following aggregate, we optimize the performance by:
+    \begin{itemize}
+        \item \<MIN>: calculate local \<MIN> (downAgg), then take global \<MIN> (upAgg).
+        \item \<MAX>: calculate local \<MAX> (downAgg), then take global \<MAX> (upAgg).
+        \item \<COUNT>: calculate local \<COUNT> (downAgg), then take global \<SUM> (upAgg).
+        \item \<SUM>: calculate local \<SUM> (downAgg), then take global \<SUM> (upAgg).
+        \item \<AVG>: locally calculate a \<SUM> and a \<COUNT> (downAgg), then take global
+            $\frac{\sum\text{\<SUM>}}{\sum\text{\<COUNT>}}$ (upAgg).
+    \end{itemize}
+
+    As an example, Figure \ref{fig:para} is a diagram showing the workflow of Parallel \<SimpleDB> with two workers.
+    \begin{figure}[t!]
+        \begin{tikzpicture}[
+            >=latex,shorten >=2pt,shorten <=2pt,shape aspect=1,
+        ]
+            \tikzstyle{cyl} = [cylinder, shape border rotate=90, draw, minimum height=1cm, minimum width=5cm]
+            \tikzstyle{noo} = [rectangle, draw, minimum height=1pt, minimum width=2pt]
+            \tikzstyle{cir} = [ellipse, draw, minimum height=1cm, minimum width=2cm]
+            \tikzstyle{poi} = [ellipse, draw, fill]
+            \tikzstyle{joining} = []
+            \tikzset{>=stealth}
+            \tikzstyle{readup} = [red, ->]
+            \tikzstyle{comm} = [blue, ->]
+
+            % server
+            \node[noo] (user) {User};
+            \node[noo, minimum height=1cm, minimum width=3cm, right=1.5cm of user] (server) {Server};
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (cc) at ($(server) + (1.5, 0)$) {CC};
+            \path[->] (user) edge node[midway, above] {query} (server);
+            \node[rotate=90] (a) at ($(server.south) + (-2, -2)$) {\small{Optimize query}};
+            \node[rotate=90] (b) at ($(server.south) + (2, -2)$) {\small{Parallelize query}};
+            \path[->] (server.south) edge (a);
+            \path[->] (server.south) edge (b);
+
+            % Worker
+            \node[noo, minimum height=1cm, minimum width=3cm, above right=1.5cm and 1cm of server]
+                (worker11) {Worker 1};
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (sp1) at ($(worker11) + (1.5, 0)$) {SP};
+            \path[->] (server.north east) edge node[midway, left] {new query} (worker11);
+            \node (c) at ($(worker11.north) + (0, 1)$) {\small{localize query, SeqScan}};
+            \path[->] (worker11.north) edge (c);
+            \node[noo, minimum height=1cm, minimum width=3cm, right=2cm of worker11] (worker12) {Worker 1};
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (sc1) at ($(worker12) + (-1.5, 0)$) {SC};
+            \path[->] (sp1) edge (sc1);
+
+            \node[noo, minimum height=1cm, minimum width=3cm, below right=1.5cm and 1cm of server]
+                (worker21) {Worker 2};
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (sp2) at ($(worker21) + (1.5, 0)$) {SP};
+            \path[->] (server.south east) edge node[midway, right] {new query} (worker21);
+            \node (d) at ($(worker21.south) + (0, -1)$) {\small{localize query, SeqScan}};
+            \path[->] (worker21.south) edge (d);
+            \node[noo, minimum height=1cm, minimum width=3cm, right=2cm of worker21] (worker22) {Worker 2};
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (sc2) at ($(worker22) + (-1.5, 0)$) {SC};
+            \path[->] (sp2) edge (sc2);
+            \path[->] (sp1) edge (sc2);
+            \path[->] (sp2) edge (sc1);
+
+            \node (e) at ($(worker12) + (0, 2)$) {\small{more processing}};
+            \path[->] (worker12.north) edge (e);
+            \node (f) at ($(worker22) + (0, -2)$) {\small{more processing}};
+            \path[->] (worker22.south) edge (f);
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (cp1) at ($(worker12) + (1.5, 0)$) {CP};
+            \node[noo, fill=gray!20, minimum height=0.5cm, minimum width=0.5cm] (cp2) at ($(worker22) + (1.5, 0)$) {CP};
+            \path[->, red] (cp1) edge [bend left=15] node[midway, above] {return} (cc);
+            \path[->, red] (cp2) edge [bend right=15] node[midway, above] {return} (cc);
+            \path[->, red] (cc.west) edge [bend right=30] node[midway, above] {return} (user.north);
+        \end{tikzpicture}
+        \caption{Parallel \<SimpleDB>. SC - Shuffle Consumer, CC - Collect Consumer, SP - Shuffle Producer, SC - Shuffle
+        Consumer}
+        \label{fig:para}
+    \end{figure}
+
+    \subsection{Performance}
+    In this section, we list the performance of parallel \<SimpleDB> running four different queries, with 1, 2, and 4
+    workers available.
+
+    Query A:
+    \begin{lstlisting}[language=SQL]
+    SELECT *
+        FROM Actor WHERE id < 1000;
+    \end{lstlisting}
+
+    Query B:
+    \begin{lstlisting}[language=SQL]
+    SELECT m.name,m.year,g.genre
+        FROM Movie m, Director d, Genre g, Movie_Director md
+        WHERE d.fname='Steven' AND d.lname='Spielberg'
+            AND d.id=md.did AND md.mid=m.id
+            AND g.mid=m.id;
+    \end{lstlisting}
+
+    Query C:
+    \begin{lstlisting}[language=SQL]
+    SELECT m.name, COUNT(a.id)
+        FROM Movie m, Director d, Movie_Director md, Actor a, Casts c
+        WHERE d.fname='Steven' AND d.lname='Spielberg'
+            AND d.id=md.did AND md.mid=m.id
+            AND c.mid=m.id
+            AND c.pid=a.id
+        GROUP BY m.name;
+    \end{lstlisting}
+
+    Query D:
+    \begin{lstlisting}[language=SQL]
+    SELECT m.name, AVG(a.id)
+        FROM Movie m, Director d, Movie_Director md, Actor a, Casts c
+        WHERE d.fname='Steven' AND d.lname='Spielberg'
+            AND d.id=md.did AND md.mid=m.id
+            AND c.mid=m.id
+            AND c.pid=a.id
+        GROUP BY m.name;
+    \end{lstlisting}
+
+
+    \begin{table}[!htb]
+        \centering
+        \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y}
+             & \multicolumn{4}{c}{Query} \\ \hline
+             \# workers & A & B & C & D \\\hline
+             1 & A & B & C & D \\\hline
+             2 & A & B & C & D \\\hline
+             4 & A & B & C & D \\
+        \end{tabularx}
+    \end{table}
 
 
 
