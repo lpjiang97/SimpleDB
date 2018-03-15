@@ -17,12 +17,12 @@
 
 	\par In a typical database architecture, there are four main components: Process Manager, Query Executor, Share
 Utilities, and Storage Manger \cite{lecture3}. For our implementation of \<SimpleDB> in the labs,
-I focus on the Storage Manager and Query Executor: adding access methods for data store on disk in lab1, adding both file
-mutability (insert/delete tuples to/from file system, eviction from full BufferPool) and query operators (SeqScan, Join,
-etc.) \& aggregates (min, max, etc.) in lab2, adding lock manager in lab3, adding log manager in lab4, and finally, adding
-parallel data processing in lab6 \cite{db}.
+the focus is on the Storage Manager and Query Executor: adding access methods for data stored on disk in lab1, adding both file
+mutability (insert/delete tuples to/from file system, eviction from a full BufferPool) and query operators (SeqScan, Join,
+etc.) \& aggregates (min, max, etc.) in lab2, adding the lock manager in lab3, adding the log manager in lab4, and finally, adding
+parallel data processing ability in lab6 \cite{db}.
 
-    Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which I implemented in the labs.
+    Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which we implemented in the labs.
     \begin{figure}[h]
         \begin{mybox}
             \begin{tikzpicture}[
@@ -38,14 +38,14 @@ parallel data processing in lab6 \cite{db}.
             \tikzstyle{comm} = [blue, ->]
         % Disk Interface %
         \node[noo, minimum height = 8cm, minimum width = 6cm, dashed] (diski) at (-10, 2) {};
-            \node at ($(diski) + (0, 4)$) {Disk Inerface};
+            \node at ($(diski) + (0, 4.3)$) {Disk Interface};
         \node[cyl] (disk) at (-10, 0) {Disk};
         \node[noo, minimum height=0.5cm, minimum width=1cm] (diskpage) at (-10, 0.8) {\<File f>};
         \node (diskpage1) at (diskpage.north east) {};
         \node (diskpage2) at (diskpage.north west) {};
         % Heapfile
         \node[noo, minimum height=3cm, minimum width=5cm] (heapfile) at (-10, 3.7) {};
-            \node at (heapfile.north) {HeapFile};
+            \node at ($(heapfile.north) + (0, 0.3)$) {HeapFile};
         \node (heapfile1) at (heapfile.south east) {};
         \node (heapfile2) at (heapfile.south west) {};
         \path[->] (diskpage1) edge (heapfile1);
@@ -53,7 +53,7 @@ parallel data processing in lab6 \cite{db}.
         % Heappage
         \node[noo, minimum height=1.5cm, minimum width=1cm] (heappage) at (-12, 3.2) {};
         \node[noo, minimum height=1.5cm, minimum width=1cm] (heappage2) at (-11, 3.2) {};
-            \node at ($(heappage2.north) + (-0.5, 0)$) {\small{HeapPage}};
+            \node at ($(heappage2.north) + (-0.5, 0.3)$) {\small{HeapPage}};
             \node at ($(heappage2) + (1, 0)$) {...};
         % Tuple
         \node[noo, minimum height=.1cm, minimum width=.2cm] (tuple1) at (-12.35, 3) {};
@@ -69,7 +69,7 @@ parallel data processing in lab6 \cite{db}.
         \node[noo, minimum height=1cm, minimum width=2cm] (log) at ($(lock)+ (0, -1.5)$) {Log Manager};
         \node[noo, minimum height=1.5cm, minimum width=2cm] (catalog) at ($(buffer)+ (0, -3)$) {Catalog};
         \node[noo, minimum height=10cm, minimum width=4cm, dashed] (storage) at ($(buffer)+ (0, 0.5)$) {};
-            \node at ($(storage) + (0, 5)$) {Storage Manager};
+            \node at ($(storage) + (0, 5.3)$) {Storage Manager};
         % Executor
         \node[noo, minimum height=4.5cm, minimum width=5.5cm, dashed] (exec) at ($(log) + (5, 0.6)$) {};
         \node[noo, minimum height=1cm, minimum width=2cm] (it) at ($(log) + (4, -1)$) {\small{IteratorInterface}};
@@ -164,17 +164,17 @@ parallel data processing in lab6 \cite{db}.
         \caption{\texttt{SimpleDB} \texttt{next}}
         \label{fig:next}
     \end{figure}
-        In Lab 1, I implemented \<getPage> which is needed for reading Pages into memory and getting tuples,
-        together with \<SeqScan> operator to scan the file and return tuples. The workflow of opening opertators
+        In Lab 1, we implemented \<getPage> which is needed for reading pages into memory and getting tuples,
+        together with \<SeqScan> operator to scan files and return tuples. The workflow of opening opertators
         to read file and caching pages into BufferPool is shown by Figure \ref{fig:open}, and the workflow of recursively
         getting tuples through \<SeqScan> using \<next()> is shown by Figure \ref{fig:next}. \par
 
-        In Lab 2, I added \<insert>, \<delete> funcionalities in \<SimpleDB>, which insert/delete tuples to/from the
-        pages in BufferPool by calling the method from \<HeapFile> to update the page, then \<BufferPool>
-        updates the records by re-inserting the pages into the \<BufferPool>. When the \<BufferPool> is
-        full and a new page need adding, \<writePage> from \<HeapFile> will be called to write the dirty
+        In Lab 2, we added \<insert>, \<delete> funcionalities in \<SimpleDB>, which insert/delete tuples to/from the
+        pages in BufferPool by calling the method from \<HeapFile> to update pages, then \<BufferPool>
+        updates the records by re-inserting the pages into the \<BufferPool>. When \<BufferPool> is
+        full and a new page need adding, \<writePage> from \<HeapFile> will be called to write a dirty
         page to disk and add the new page into the \<BufferPool>. \<BufferPool> is in charge of updating
-        the pages because \<Insert/Delete> operators directly call \<insert/delete> of \<BufferPool>. Besides, I also
+        pages because \<Insert/Delete> operators directly call \<insert/delete> of \<BufferPool>. Besides, we also
         implemented \<Filter>, \<Join> operators and the aggregates. As an example, Figure \ref{fig:join} shows the
         workflow of using \<Join> opeator and Figure \ref{fig:insert} shows the workflow of inserting tuples.
 
@@ -202,11 +202,11 @@ parallel data processing in lab6 \cite{db}.
         \end{figure}
 
     \subsection{Lock Manager}
-    Lab 3 focuses on adding Transactions functionality to simpleDB. In order to achieve this, I implemented our own
+    Lab 3 focuses on adding transactions functionality to simpleDB. In order to achieve this, we implemented our own
     \texttt{Lock} and \texttt{LockManager} which together handle acquiring/releasing both \texttt{SHARED} (read-only)
     and \texttt{EXCLUSIVE} (read-write) locks by different transactions on page granularity. \<SimpleDB> uses time-
     out limits for \texttt{acquire} so that a certain period time of blocking on \texttt{acquire} will be considered as
-    deadlock and thus abort the transaction. \par
+    deadlock and thus cause the system to abort the transaction. \par
 
     \begin{figure}[htb!]
         \begin{tikzpicture}[
@@ -253,20 +253,19 @@ parallel data processing in lab6 \cite{db}.
 	\end{itemize}
 
     \subsection{Log Manager}
-    In Lab 4, I focus on adding rollback and recovery functionality to simpleDB upon abort and system crash.
-    Specifically, I implemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction
+    In Lab 4, we focus on adding rollback and recovery functionality to \<SimpleDB> upon abort and system crash.
+    Specifically, Iweimplemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction
     hasn't commited yet), and NO FORCE (on transaction commit, no need to force write dirty pages to disk) for buffer
-    pool management. In order to achieve this, I implemented log-based rollback and recovery which performs a
+    pool management. In order to achieve this, we implemented log-based rollback and recovery which performs a
     redo-phase and an undo-phase. \par
 
     \<SimpleDB> supports six kinds of logs: \<BEGIN, COMMIT, ABORT, UPDATE, CHECKPOINT,> and \<CLR>. CLR is part of my
-    design in order to make undo-phase easier to implement.
+    design to make undo-phase easier to implement.
 
     \begin{itemize}
-        \item \texttt{LogFile.rollback}: I need this method to roll back changes made by an aborted transaction. This
-        methdo will read from the end of the log file and undo changes made by this transaction until its first active
-        log record. It is also implemented that undo changes will append new CLR logs. More of this in the design part
-        of this writeup.
+        \item \texttt{LogFile.rollback}: we need this method to roll back changes made by an aborted transaction. This
+        method will read from the end of the log file and undo changes made by this transaction until its first active
+        log record. It is also implemented that undo changes will append new CLR logs.
 
         \item \texttt{LogFile.recover}: I need this method to recover a simpleDB system upon unexpected crashes. It
         will start redoing from the beginning of the log file or the last checkpoint log if any, during which a map of
@@ -277,10 +276,11 @@ parallel data processing in lab6 \cite{db}.
 \section{Parallel Data Processing}
 	\label{parallel}
 
-    In Lab 6, I added the ability of parallel data processing to \<SimpleDB>. The basic structure of parallel \<SimpleDB>
-    contains \<Worker> and \<Server>. The workflow goes as follows: for every query users enter, it is first sent to
+    In Lab 6, we added the ability of parallel data processing to \<SimpleDB>. The basic structure of parallel \<SimpleDB>
+    contains multiple \<Worker> and one single \<Server>. The workflow goes as follows: for every query the user enters,
+    it is first sent to
     \<Server> for some optimization (we did not implement this part this quarter). Next step is to prepare this query to
-    be run in parallel by inserting new operators (more on this later). The this query will be sent to all
+    be run in parallel by inserting new operators (more on this later). Then this query will be sent to all
     available workers. After each worker receives the query, it will localize it (more on this later) and run the query.
     Finally, each worker will send the results back to \<Server>, then server will aggregate all the results and send
     the final result back to users. \par
@@ -294,30 +294,30 @@ parallel data processing in lab6 \cite{db}.
     The following sections explain the detailed implementations on these questions.
 
     \subsection{\<Worker.java>}
-    In \<Worker.java>, I localize the query for it to run on the local machine. It does three jobs: (1) For \<SeqScan>
-    operators, I reset its \<tid> and \<alias>. This is because the \<tid> of the \emph{local} table may not be the
-    same as the one of global table, and the \<Catalog> is a local verlsion. I need to update the \<tid> so that
-    \<SeqScan> reads the correct subtable; (2) For \<Producers>, I set its worker to \<this>. This is because \<Worker>
-    handles the data buffer of \<Consumers> (more on this later) and the \<Producer> needs to know which bufffer to send
-    data to for the \<Consumer> to get data; (3) For \<Consumers>, I set its data buffer in \<Worker> through its
+    In \<Worker.java>, we localize the query for it to run on the local machine. It does three jobs: (1) For \<SeqScan>
+    operators, reset its \<tid> and \<alias>. This is because the \<tid> of the \emph{local} table may not be the
+    same as the one of global table, and the \<Catalog> is a local verlsion. We need to update the \<tid> so that
+    \<SeqScan> reads the correct subtable; (2) For \<Producers>, set its worker to \<this>. This is because \<Worker>
+    handles the data buffer of \<Consumers> (more on this later) and the \<Producer> needs to know to which bufffer to
+    send data for the \<Consumer>; (3) For \<Consumers>, set its data buffer in \<Worker> through its
     \<inBuffer> map.
 
     \subsection{\<ShuffleProducer.java> \& \<ShuffleConsumer.java>}
-    I implement \<ShuffleProducer.java> \& \<ShuffleConsumer.java> to enable data transfer between workers. In
-    \<ShuffleProducer.java>, we use the same protocal in \<CollectProducer> to send tuples to \<Consumer>. The difference
+    We implement \<ShuffleProducer.java> \& \<ShuffleConsumer.java> to enable data transfer between workers. In
+    \<ShuffleProducer.java>, we use the same protocol in \<CollectProducer> to send tuples to \<Consumer>. The difference
     is that \<ShuffleProducer> handles multiple connections with multiple \<ShuffleConsumer> (whose addresses
     are stored in a \<SocketInfo> wrapper), so I keep three lists of \<IoSession> as connections, \<List> as data buffers,
     and \<Long> as timestamps, one combination for one \<Consumer>. The working thread of \<ShuffleProducer> takes
     tuples from its child operator, and uses a \<PartitionFunction> to decide to which consumer to send this tuple. \par
 
-    In \<ShuffleConsumer>, I follow the design of \<CollectConsumer> to constantly take tuples out of the buffer (
-    populated by \<ShuffleProducer>) and returns an iterator of tuples in \texttt{fetchNext}. Together, \<ShuffleProducer>
-    and \<ShuffleConsumer> enables data transfer between \<Workers>
+    In \<ShuffleConsumer>, I followed the design of \<CollectConsumer> to constantly take tuples out of the buffer (
+    populated by \<ShuffleProducer>) and returns an iterator of tuples in \<fetchNext>. Together, \<ShuffleProducer>
+    and \<ShuffleConsumer> enable data transfer between \<Workers>
 
     \subsection{\<AggregateOptimizer>}
-    In \<AggregateOptimizer.java>, I added optimization for aggregates running in parallel. The idea is that each local
-    worker could return an local aggregate result, then sent it to a \<CollectConsumer> to return a final aggregate
-    result. For each of the following aggregate, I optimize the performance by:
+    In \<AggregateOptimizer.java>, we added optimization for aggregates running in parallel. The idea is that each local
+    worker could work out an local aggregate result, then sent it to a \<CollectConsumer> to return a final aggregate
+    result. For each of the following aggregate, we optimize the performance by:
     \begin{itemize}
         \item \<MIN>: calculate local \<MIN> (downAgg), then take global \<MIN> (upAgg).
         \item \<MAX>: calculate local \<MAX> (downAgg), then take global \<MAX> (upAgg).
@@ -392,7 +392,9 @@ parallel data processing in lab6 \cite{db}.
     \subsection{Performance}
     In this section, I list the performance of parallel \<SimpleDB> running four different queries, with 1, 2, and 4
     workers available. Table \ref{tab:cold} and table \ref{tab:warm} shows the execution time of the following four
-    queries on 1, 2, and 4 workers respectively.
+    queries on 1, 2, and 4 workers respectively, one for the cold cache (first time running the query since \<SimpleDB>
+    starts), the other one for already loaded cache (second time running the query since \<SimpleDB> starts). All runtime
+    is the average of six trials.
 
     Query A:
     \begin{lstlisting}[language=SQL]
@@ -435,6 +437,7 @@ parallel data processing in lab6 \cite{db}.
         \centering
         \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y}
              & \multicolumn{4}{c}{Query} \\ \hline
+             \rowcolor{Gray}
              \# workers & A & B & C & D \\\hline
              1 & 1.44 & 1.83 & 5.65 & 5.49 \\\hline
              2 & 1.89 & 1.86 & 5.11 & 6.18 \\\hline
@@ -447,6 +450,7 @@ parallel data processing in lab6 \cite{db}.
         \centering
         \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y}
              & \multicolumn{4}{c}{Query} \\ \hline
+             \rowcolor{Gray}
              \# workers & A & B & C & D \\\hline
              1 & 1.18 & 0.97 & 4.09 & 4.10 \\\hline
              2 & 1.00 & 1.19 & 3.50 & 3.49 \\\hline
@@ -455,9 +459,10 @@ parallel data processing in lab6 \cite{db}.
         \caption{Performance with loaded cache}\label{tab:warm}
     \end{table}
 
-    As shown in the following bar charts, increasing the number of workers seems to \emph{decrease} the performance of
-    \<SimpleDB>. I suspect that the size of the database we run is not large enough to show the advantage of data processing,
-    i.e. the inner process communication time beats the efficiency of parallel execution.
+    As shown in the following bar charts (Figure \ref{fig:cold} and Figure \ref{fig:warm}), increasing the number of
+    workers seems to \emph{decrease} the performance of \<SimpleDB>. I suspect the reason to be that the size of the
+    database we run is not large enough to show the advantage of data processing, i.e. the inner process communication
+    time beats the efficiency of parallel execution.
 
     % prepare data
     \pgfplotstableread[row sep=\\,col sep=&]{
@@ -538,6 +543,9 @@ parallel data processing in lab6 \cite{db}.
     \<SimpleDB> consists most of the modern database architecture \cite{lecture3}. However, there are a
     few aspects in my \<SimpleDB> implementation (for simplicity) which affects the performance. Here are a few:
     \begin{itemize}
+        \item Naive \<BufferPool> eviction policy: in the current design, we choose the first page in \<BufferPool> when
+            its full. This is a naive approach because the page might be a frequently accessed page. A better approach
+            is to use an approximation of Least-Recently-Used policy to evict dirty pages.
         \item Lack of indices: There are no index files in \<SimpleDB> architecture, which is a drastic decrease performance
             wise, especially for databases which receive more look-up queries.
         \item Slow join: The current implementation of join is nested-loop-join, which is the least efficient. Ideally,
@@ -556,7 +564,6 @@ parallel data processing in lab6 \cite{db}.
         \item Recovery Protocal: we did not implement ARIES \cite{lecture18}, as discussed in class.
             Instead, current design of redoing every log is wasteful.
     \end{itemize}
-
 
 \newpage
 \begin{thebibliography}{9}
