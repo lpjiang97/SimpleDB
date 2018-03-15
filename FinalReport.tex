@@ -1,4 +1,5 @@
 \documentclass[12pt]{myland}
+\usepackage{pgfplots}
 
 %%% Formatting
 \def\<#1>{\texttt{#1}}
@@ -20,12 +21,12 @@
 
 	\par In a typical database architecture, there are four main components: Process Manager, Query Executor, Share
 Utilities, and Storage Manger (Balazinska, Mass, Lecture 3). For our implementation of \<SimpleDB> in the labs,
-we focus on the Storage Manager and Query Executor: adding access methods for data store on disk in lab1, adding both file
+I focus on the Storage Manager and Query Executor: adding access methods for data store on disk in lab1, adding both file
 mutability (insert/delete tuples to/from file system, eviction from full BufferPool) and query operators (SeqScan, Join,
 etc.) \& aggregates (min, max, etc.) in lab2, adding lock manager in lab3, adding log manager in lab4, and finally, adding
 parallel data processing in lab6.
 
-    Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which we implemented in the labs.
+    Figure \ref{fig:architecture} shows the parts of the architecture of \<SimpleDB> which I implemented in the labs.
     \begin{figure}[h]
         \begin{mybox}
             \begin{tikzpicture}[
@@ -167,17 +168,17 @@ parallel data processing in lab6.
         \caption{\texttt{SimpleDB} \texttt{next}}
         \label{fig:next}
     \end{figure}
-        In Lab 1, we implemented \<getPage> which is needed for reading Pages into memory and getting tuples,
+        In Lab 1, I implemented \<getPage> which is needed for reading Pages into memory and getting tuples,
         together with \<SeqScan> operator to scan the file and return tuples. The workflow of opening opertators
         to read file and caching pages into BufferPool is shown by Figure \ref{fig:open}, and the workflow of recursively
         getting tuples through \<SeqScan> using \<next()> is shown by Figure \ref{fig:next}. \par
 
-        In Lab 2, We added \<insert>, \<delete> funcionalities in \<SimpleDB>, which insert/delete tuples to/from the
+        In Lab 2, I added \<insert>, \<delete> funcionalities in \<SimpleDB>, which insert/delete tuples to/from the
         pages in BufferPool by calling the method from \<HeapFile> to update the page, then \<BufferPool>
         updates the records by re-inserting the pages into the \<BufferPool>. When the \<BufferPool> is
         full and a new page need adding, \<writePage> from \<HeapFile> will be called to write the dirty
         page to disk and add the new page into the \<BufferPool>. \<BufferPool> is in charge of updating
-        the pages because \<Insert/Delete> operators directly call \<insert/delete> of \<BufferPool>. Besides, we also
+        the pages because \<Insert/Delete> operators directly call \<insert/delete> of \<BufferPool>. Besides, I also
         implemented \<Filter>, \<Join> operators and the aggregates. As an example, Figure \ref{fig:join} shows the
         workflow of using \<Join> opeator and Figure \ref{fig:insert} shows the workflow of inserting tuples.
 
@@ -206,7 +207,7 @@ parallel data processing in lab6.
         \end{figure}
 
     \subsection{Lock Manager}
-    Lab 3 focuses on adding Transactions functionality to simpleDB. In order to achieve this, we implemented our own
+    Lab 3 focuses on adding Transactions functionality to simpleDB. In order to achieve this, I implemented our own
     \texttt{Lock} and \texttt{LockManager} which together handle acquiring/releasing both \texttt{SHARED} (read-only)
     and \texttt{EXCLUSIVE} (read-write) locks by different transactions on page granularity. \<SimpleDB> uses time-
     out limits for \texttt{acquire} so that a certain period time of blocking on \texttt{acquire} will be considered as
@@ -237,11 +238,11 @@ parallel data processing in lab6.
     \end{figure}
 
 	\begin{itemize}
-        \item \texttt{Lock}: We need this class to represent the two types of locks simpleDB uses: \texttt{SHARED} and
+        \item \texttt{Lock}: I need this class to represent the two types of locks simpleDB uses: \texttt{SHARED} and
             \texttt{EXCLUSIVE}. A shared lock is acquired by read-only transactions, and thus can be shared between
             many read-only transactions; an exclusive lock is acquired by read-write transactions, and thus can only be
             acquired by at most one read-write transaction at a time.
-        \item \texttt{LockManager}: We need this class as the manager for all locking-related actions in simpleDB. It
+        \item \texttt{LockManager}: I need this class as the manager for all locking-related actions in simpleDB. It
             is created within \texttt{BufferPool} and will be called to acquire locks when \texttt{getPage} is called
             and release locks when \texttt{transactionComplete} is called. Note that because of the design of simpleDB,
             \texttt{acquire} in \texttt{LockManager} should only need calling in \texttt{getPage} when simpleDB wants to
@@ -252,27 +253,27 @@ parallel data processing in lab6.
                         exclusive if this transaction is the only one which holds the lock)
                     \item When the lock is locked, but it is a shared lock, and the transaction wants a shared lock.
                 \end{itemize}
-        \item \texttt{BufferPool.transactionComplete}: We add this method to release all locks acquired by a
+        \item \texttt{BufferPool.transactionComplete}: I add this method to release all locks acquired by a
             transaction when it commits.
 	\end{itemize}
 
     \subsection{Log Manager}
-    In Lab 4, we focus on adding rollback and recovery functionality to simpleDB upon abort and system crash.
-    Specifically, we implemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction
+    In Lab 4, I focus on adding rollback and recovery functionality to simpleDB upon abort and system crash.
+    Specifically, I implemented STEAL (dirty pages may be evicted from the buffer pool even though the transaction
     hasn't commited yet), and NO FORCE (on transaction commit, no need to force write dirty pages to disk) for buffer
-    pool management. In order to achieve this, we implemented log-based rollback and recovery which performs a
+    pool management. In order to achieve this, I implemented log-based rollback and recovery which performs a
     redo-phase and an undo-phase. \par
 
     \<SimpleDB> supports six kinds of logs: \<BEGIN, COMMIT, ABORT, UPDATE, CHECKPOINT,> and \<CLR>. CLR is part of my
     design in order to make undo-phase easier to implement.
 
     \begin{itemize}
-        \item \texttt{LogFile.rollback}: We need this method to roll back changes made by an aborted transaction. This
+        \item \texttt{LogFile.rollback}: I need this method to roll back changes made by an aborted transaction. This
         methdo will read from the end of the log file and undo changes made by this transaction until its first active
         log record. It is also implemented that undo changes will append new CLR logs. More of this in the design part
         of this writeup.
 
-        \item \texttt{LogFile.recover}: We need this method to recover a simpleDB system upon unexpected crashes. It
+        \item \texttt{LogFile.recover}: I need this method to recover a simpleDB system upon unexpected crashes. It
         will start redoing from the beginning of the log file or the last checkpoint log if any, during which a map of
         active transactions to their first active log line is built. Then, undo-phase will use the active transaction
         map and undo any changes made by these transactions bottom up.
@@ -281,7 +282,7 @@ parallel data processing in lab6.
 \section{Parallel Data Processing}
 	\label{parallel}
 
-    In Lab 6, we added the ability of parallel data processing to \<SimpleDB>. The basic structure of parallel \<SimpleDB>
+    In Lab 6, I added the ability of parallel data processing to \<SimpleDB>. The basic structure of parallel \<SimpleDB>
     contains \<Worker> and \<Server>. The workflow goes as follows: for every query users enter, it is first sent to
     \<Server> for some optimization (we did not implement this part this quarter). Next step is to prepare this query to
     be run in parallel by inserting new operators (more on this later). The this query will be sent to all
@@ -298,30 +299,30 @@ parallel data processing in lab6.
     The following sections explain the detailed implementations on these questions.
 
     \subsection{\<Worker.java>}
-    In \<Worker.java>, we localize the query for it to run on the local machine. It does three jobs: (1) For \<SeqScan>
-    operators, we reset its \<tid> and \<alias>. This is because the \<tid> of the \emph{local} table may not be the
-    same as the one of global table, and the \<Catalog> is a local verlsion. We need to update the \<tid> so that
-    \<SeqScan> reads the correct subtable; (2) For \<Producers>, we set its worker to \<this>. This is because \<Worker>
+    In \<Worker.java>, I localize the query for it to run on the local machine. It does three jobs: (1) For \<SeqScan>
+    operators, I reset its \<tid> and \<alias>. This is because the \<tid> of the \emph{local} table may not be the
+    same as the one of global table, and the \<Catalog> is a local verlsion. I need to update the \<tid> so that
+    \<SeqScan> reads the correct subtable; (2) For \<Producers>, I set its worker to \<this>. This is because \<Worker>
     handles the data buffer of \<Consumers> (more on this later) and the \<Producer> needs to know which bufffer to send
-    data to for the \<Consumer> to get data; (3) For \<Consumers>, we set its data buffer in \<Worker> through its
+    data to for the \<Consumer> to get data; (3) For \<Consumers>, I set its data buffer in \<Worker> through its
     \<inBuffer> map.
 
     \subsection{\<ShuffleProducer.java> \& \<ShuffleConsumer.java>}
-    We implement \<ShuffleProducer.java> \& \<ShuffleConsumer.java> to enable data transfer between workers. In
+    I implement \<ShuffleProducer.java> \& \<ShuffleConsumer.java> to enable data transfer between workers. In
     \<ShuffleProducer.java>, we use the same protocal in \<CollectProducer> to send tuples to \<Consumer>. The difference
     is that \<ShuffleProducer> handles multiple connections with multiple \<ShuffleConsumer> (whose addresses
-    are stored in a \<SocketInfo> wrapper), so we keep three lists of \<IoSession> as connections, \<List> as data buffers,
+    are stored in a \<SocketInfo> wrapper), so I keep three lists of \<IoSession> as connections, \<List> as data buffers,
     and \<Long> as timestamps, one combination for one \<Consumer>. The working thread of \<ShuffleProducer> takes
     tuples from its child operator, and uses a \<PartitionFunction> to decide to which consumer to send this tuple. \par
 
-    In \<ShuffleConsumer>, we follow the design of \<CollectConsumer> to constantly take tuples out of the buffer (
+    In \<ShuffleConsumer>, I follow the design of \<CollectConsumer> to constantly take tuples out of the buffer (
     populated by \<ShuffleProducer>) and returns an iterator of tuples in \texttt{fetchNext}. Together, \<ShuffleProducer>
     and \<ShuffleConsumer> enables data transfer between \<Workers>
 
     \subsection{\<AggregateOptimizer>}
-    In \<AggregateOptimizer.java>, we added optimization for aggregates running in parallel. The idea is that each local
+    In \<AggregateOptimizer.java>, I added optimization for aggregates running in parallel. The idea is that each local
     worker could return an local aggregate result, then sent it to a \<CollectConsumer> to return a final aggregate
-    result. For each of the following aggregate, we optimize the performance by:
+    result. For each of the following aggregate, I optimize the performance by:
     \begin{itemize}
         \item \<MIN>: calculate local \<MIN> (downAgg), then take global \<MIN> (upAgg).
         \item \<MAX>: calculate local \<MAX> (downAgg), then take global \<MAX> (upAgg).
@@ -394,8 +395,9 @@ parallel data processing in lab6.
     \end{figure}
 
     \subsection{Performance}
-    In this section, we list the performance of parallel \<SimpleDB> running four different queries, with 1, 2, and 4
-    workers available.
+    In this section, I list the performance of parallel \<SimpleDB> running four different queries, with 1, 2, and 4
+    workers available. Table \ref{tab:cold} and table \ref{tab:warm} shows the execution time of the following four
+    queries on 1, 2, and 4 workers respectively.
 
     Query A:
     \begin{lstlisting}[language=SQL]
@@ -434,19 +436,106 @@ parallel data processing in lab6.
         GROUP BY m.name;
     \end{lstlisting}
 
+    \begin{table}[!htb]
+        \centering
+        \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y}
+             & \multicolumn{4}{c}{Query} \\ \hline
+             \# workers & A & B & C & D \\\hline
+             1 & 1.44 & 1.83 & 5.65 & 5.49 \\\hline
+             2 & 1.89 & 1.86 & 5.11 & 6.18 \\\hline
+             4 & 1.48 & 3.11 & 7.49 & 7.22 \\
+        \end{tabularx}
+        \caption{Performance with cold cache}\label{tab:cold}
+    \end{table}
 
     \begin{table}[!htb]
         \centering
         \begin{tabularx}{\linewidth}{Y|Y|Y|Y|Y}
              & \multicolumn{4}{c}{Query} \\ \hline
              \# workers & A & B & C & D \\\hline
-             1 & A & B & C & D \\\hline
-             2 & A & B & C & D \\\hline
-             4 & A & B & C & D \\
+             1 & 1.18 & 0.97 & 4.09 & 4.10 \\\hline
+             2 & 1.00 & 1.19 & 3.50 & 3.49 \\\hline
+             4 & 1.15 & 1.31 & 4.92 & 4.48 \\
         \end{tabularx}
+        \caption{Performance with loaded cache}\label{tab:warm}
     \end{table}
 
+    As shown in the following bar charts, increasing the number of workers seems to \emph{decrease} the performance of
+    \<SimpleDB>. I suspect that the size of the database we run is not large enough to show the advantage of data processing,
+    i.e. the inner process communication time beats the efficiency of parallel execution.
 
+    % prepare data
+    \pgfplotstableread[row sep=\\,col sep=&]{
+        worker & A & B & C & D\\
+        1 & 1.44 & 1.83 & 5.65 & 5.49 \\
+        2 & 1.89 & 1.86 & 5.11 & 6.18 \\
+        4 & 1.48 & 3.11 & 7.49 & 7.22 \\
+    }\colddata
+
+    \pgfplotstableread[row sep=\\,col sep=&]{
+        worker & A & B & C & D \\
+        1 & 1.18 & 0.97 & 4.09 & 4.10 \\
+        2 & 1.00 & 1.19 & 3.50 & 3.49 \\
+        4 & 1.15 & 1.31 & 4.92 & 4.48 \\
+    }\loaddata
+
+    \begin{figure}[!htb]
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                ybar,
+                bar width=.3cm,
+                width=.8\textwidth,
+                height=.5\textwidth,
+                legend style={at={(0.5,1)}, anchor=north,legend columns=-1},
+                symbolic x coords={1, 2, 4},
+                xtick=data,
+                nodes near coords,
+                every node near coord/.append style={font=\tiny},
+                nodes near coords align={vertical},
+                ymin=0,ymax=10,
+                ylabel={Execution Time /sec},
+                xlabel={\# Workers}
+            ]
+            \addplot table[x=worker,y=A]{\colddata};
+            \addplot table[x=worker,y=B]{\colddata};
+            \addplot table[x=worker,y=C]{\colddata};
+            \addplot table[x=worker,y=D]{\colddata};
+            \legend{A, B, C, D}
+        \end{axis}
+        \end{tikzpicture}
+        \caption{Performance with cold cache}
+        \label{fig:cold}
+    \end{figure}
+
+    \begin{figure}[!htb]
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                ybar,
+                bar width=.3cm,
+                width=.8\textwidth,
+                height=.5\textwidth,
+                legend style={at={(0.5,1)}, anchor=north,legend columns=-1},
+                symbolic x coords={1, 2, 4},
+                xtick=data,
+                nodes near coords,
+                every node near coord/.append style={font=\tiny},
+                nodes near coords align={vertical},
+                ymin=0,ymax=10,
+                ylabel={Execution Time /sec},
+                xlabel={\# Workers}
+            ]
+            \addplot table[x=worker,y=A]{\loaddata};
+            \addplot table[x=worker,y=B]{\loaddata};
+            \addplot table[x=worker,y=C]{\loaddata};
+            \addplot table[x=worker,y=D]{\loaddata};
+            \legend{A, B, C, D}
+        \end{axis}
+        \end{tikzpicture}
+        \caption{Performance with loaded cache}
+        \label{fig:warm}
+    \end{figure}
 
 \section{Discussion}
 	\label{discussion}
